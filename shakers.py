@@ -20,6 +20,27 @@ import faiss
 from sentence_transformers import SentenceTransformer
 
 # -----------------------------
+# --------- HELPER FUNCS ------
+# -----------------------------
+_CODE_FENCE = re.compile(r"```(?:json)?\s*([\s\S]*?)```", re.IGNORECASE)
+
+def _parse_json_array(text: str):
+    import json, re
+    s = text.strip()
+    # fast path
+    try:
+        arr = json.loads(s); return arr
+    except: pass
+    # strip code fences + grab the first [...] span
+    s = re.sub(r"^```[\w]*\s*|\s*```$", "", s, flags=re.DOTALL)
+    i, j = s.find("["), s.rfind("]")
+    if i != -1 and j != -1:
+        try: return json.loads(s[i:j+1])
+        except: pass
+    # last resort: grab quoted strings
+    return re.findall(r'"([^"]+)"', s)[:3]
+
+# -----------------------------
 # --------- CHUNKING ----------
 # -----------------------------
 H1 = re.compile(r'^\s*#\s+(.*)$', re.MULTILINE)
@@ -222,11 +243,34 @@ def extractive_fallback(query: str, docs: List[Dict]) -> str:
         lines.append(f"- {d['title']} — {d['section']} ({d['source']}#{d['id'].split('#')[-1]})")
     return "\n".join(lines).strip()
 
+def rewrite_queries(user_query: str, n: int = 3) -> List[str]:
+    """
+    Ask the LLM to produce n diverse, intent-preserving rewrites for retrieval.
+    """
+    prompt = f"""DO NOT RESPOND WITH MARKDOWN. ONLY VALID JSON. You are a query optimizer for a retrieval-augmented generation (RAG) system over internal product documentation.
+
+    Rewrite the user's question into {n} diverse alternative search queries that:
+    - preserve the original intent and scope,
+    - expand likely domain terms and synonyms,
+    - avoid adding facts not in the question,
+    - keep each query under 12 words,
+    - do not number the items.
+
+    Return ONLY a JSON array of strings. NO MARKDOWN. ONLY JSON
+
+    User question: '{user_query}'
+    """
+
+    text = try_gemini(prompt)
+    arr = _parse_json_array(text) if text else None
+    if arr and len(arr) >= 1:
+        return arr[:n]
+
 def generate_answer(query: str, docs: List[Dict]) -> str:
     prompt = build_prompt(query, docs)
     provider = (os.getenv("LLM_PROVIDER") or "").lower()
     text = None
-    if provider in ("gemini", ""):
+    if provider == "gemini":
         text = try_gemini(prompt)
     if text is None:
         text = extractive_fallback(query, docs)
@@ -236,6 +280,10 @@ def generate_answer(query: str, docs: List[Dict]) -> str:
 # --------- RAG ORCHESTRATION -
 # -----------------------------
 def ask(index_dir: str, query: str, k: int = 4, oos_threshold: float = 0.22) -> Dict:
+    enhanced_queries = rewrite_queries(query)
+    print(f"enhanced queries: {enhanced_queries}")
+    query = " ".join(enhanced_queries)
+
     t0 = time.perf_counter()
     vx = VectorIndex.load(index_dir)
     hits = top_k_search(vx, query, k=k)
