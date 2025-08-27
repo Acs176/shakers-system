@@ -1,0 +1,4 @@
+sentence-transformers>=2.6.1
+faiss-cpu>=1.8.0
+google-generativeai>=0.7.2
+dotenv==0.9.9
