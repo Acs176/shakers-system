@@ -17,12 +17,12 @@ from dotenv import load_dotenv
 
 import numpy as np
 import faiss
+from recommend import load_resource_index, profile_update_after_recs, recommend_resources
 from sentence_transformers import SentenceTransformer
 
 # -----------------------------
 # --------- HELPER FUNCS ------
 # -----------------------------
-_CODE_FENCE = re.compile(r"```(?:json)?\s*([\s\S]*?)```", re.IGNORECASE)
 
 def _parse_json_array(text: str):
     import json, re
@@ -279,7 +279,11 @@ def generate_answer(query: str, docs: List[Dict]) -> str:
 # -----------------------------
 # --------- RAG ORCHESTRATION -
 # -----------------------------
-def ask(index_dir: str, query: str, k: int = 4, oos_threshold: float = 0.22) -> Dict:
+def ask(index_dir: str, query: str, k: int = 4, oos_threshold: float = 0.22,
+        user_profile: Optional[Dict] = None,
+        resource_catalog_path: Optional[str] = None,
+        rec_k: int = 3
+    ) -> Dict:
     enhanced_queries = rewrite_queries(query)
     print(f"enhanced queries: {enhanced_queries}")
     query = " ".join(enhanced_queries)
@@ -310,10 +314,35 @@ def ask(index_dir: str, query: str, k: int = 4, oos_threshold: float = 0.22) -> 
             "score": round((h["score"] + 1.0) / 2.0, 3)  # normalized 0..1
         } for h in hits]
 
+    if out_of_scope:
+        answer = "I don't have information on this in the current knowledge base."
+        citations = []
+    else:
+        answer = generate_answer(query, hits)
+        citations = [{
+            "title": h["title"],
+            "section": h["section"],
+            "source": h["source"],
+            "chunk_id": h["id"],
+            "score": round((h["score"] + 1.0) / 2.0, 3)
+        } for h in hits]
+
+    # ---- New: Recommendations (optional, only if in-scope and args provided)
+    recommendations: List[Dict] = []
+    profile_delta: Optional[Dict] = None
+    if (not out_of_scope) and user_profile and resource_catalog_path:
+        model_name = getattr(vx, "model_name", "sentence-transformers/all-MiniLM-L6-v2")
+        res_index = load_resource_index(resource_catalog_path, model_name=model_name)
+        recommendations = recommend_resources(user_profile, query, res_index, k=rec_k)
+        if recommendations:
+            profile_delta = profile_update_after_recs(user_profile, recommendations, query)
+
     latency_ms = int((time.perf_counter() - t0) * 1000)
     return {
         "answer": answer,
         "citations": citations,
+        "recommendations": recommendations,
+        "profile_update": profile_delta,
         "out_of_scope": out_of_scope,
         "latency_ms": latency_ms
     }
@@ -360,10 +389,15 @@ def main():
 
     args = ap.parse_args()
 
+    RESOURCE_JSON = "./kb/resource_catalog.json"
+    with open("./kb/sample_user_profiles.json", "r", encoding="utf-8") as f:
+        profiles = json.load(f)
+    user = profiles[0]  
+
     if args.cmd == "index":
         build_index(args.kb, args.out, chunk_chars=args.chunk_chars, overlap=args.overlap, model=args.model)
     elif args.cmd == "ask":
-        res = ask(args.index, args.q, k=args.k, oos_threshold=args.oos_threshold)
+        res = ask(args.index, args.q, k=args.k, oos_threshold=args.oos_threshold, user_profile=user, resource_catalog_path=RESOURCE_JSON)
         print(json.dumps(res, ensure_ascii=False, indent=2))
 
 if __name__ == "__main__":
