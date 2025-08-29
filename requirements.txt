@@ -3,3 +3,9 @@ faiss-cpu>=1.8.0
 google-generativeai>=0.7.2
 dotenv==0.9.9
 loguru==0.7.3
+opentelemetry-api==1.36.0
+opentelemetry-exporter-otlp-proto-common==1.36.0
+opentelemetry-exporter-otlp-proto-http==1.36.0
+opentelemetry-proto==1.36.0
+opentelemetry-sdk==1.36.0
+opentelemetry-semantic-conventions==0.57b0
