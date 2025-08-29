@@ -2,9 +2,10 @@
 # --------- RECOMMENDATIONS ---
 # -----------------------------
 from typing import List, Dict, Optional
-import json, time
+import json
 import numpy as np
-import uuid
+from user import Profile
+
 
 # ---- Minimal knobs
 REC_ALPHA = 0.7        # weight for current query vs. history centroid
@@ -60,10 +61,10 @@ def load_resource_index(resource_json_path: str, model_name: str) -> ResourceInd
     return ResourceIndex(items, model_name=model_name)
 
 # ---- User profile utilities
-def _history_centroid(profile: Dict, model_name: str, last_n: int = 20) -> Optional[np.ndarray]:
-    if profile is None:
+def _history_centroid(profile: Profile, model_name: str, last_n: int = 20) -> Optional[np.ndarray]:
+    if profile is None or len(profile.query_history) == 0:
         return None
-    qs = [e["text"] for e in (profile.get("query_history") or [])][-last_n:]
+    qs = [e.text for e in profile.query_history][-last_n:]
     if not qs:
         return None
     V = _embed_texts(model_name, qs)
@@ -102,9 +103,9 @@ def _mmr_select(scores: np.ndarray, emb_mat: np.ndarray, k: int) -> List[int]:
         cand.remove(best_i)
     return picked
 
-def _why_for(resource: Dict, profile: Dict, user_query: str) -> str:
+def _why_for(resource: Dict, profile: Profile, user_query: str) -> str:
     tags = resource.get("tags") or []
-    top_tags = set(profile.get("top_tags") or [])
+    top_tags = set(profile.top_tags or [])
     if top_tags and any(t in top_tags for t in tags):
         t = next(t for t in tags if t in top_tags)
         return f"Because you've been exploring **{t}**, this digs deeper via “{resource.get('title','')}”."
@@ -113,7 +114,7 @@ def _why_for(resource: Dict, profile: Dict, user_query: str) -> str:
     return f"Directly related to your question “{q_kw}…”, and complements your recent activity."
 
 def recommend_resources(
-    user_profile: Dict,
+    user_profile: Profile,
     user_query: str,
     res_index: ResourceIndex,
     k: int = REC_TOPK
@@ -131,7 +132,7 @@ def recommend_resources(
         v = REC_ALPHA * e_q + (1.0 - REC_ALPHA) * c
         v = v / (np.linalg.norm(v) + 1e-12)
 
-    seen = set(user_profile.get("seen_resource_ids") or [])
+    seen = set(user_profile.seen_resource_ids or [])
     candidates = [(i, r) for i, r in enumerate(res_index.items) if r["id"] not in seen]
 
     if not candidates:
@@ -176,38 +177,3 @@ def recommend_resources(
             break
 
     return out
-
-# -----------------------------
-# --- PROFILE -----------------
-# -----------------------------
-
-def is_empty_profile(p: Optional[Dict]) -> bool:
-    # Treat None, {} or profiles without any history/seen items as "empty"
-    return (not p) or (not p.get("query_history") and not p.get("seen_resource_ids"))
-
-def create_profile(name: Optional[str] = None,
-                   locale: str = "en") -> Dict:
-    now = time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime())
-    return {
-        "user_id": f"u_{uuid.uuid4().hex[:6]}",
-        "name": name or "Anonymous",
-        "locale": locale,
-        "created_at": now,
-        "last_active": now,
-        "query_history": [],
-        "seen_resource_ids": [],
-        "clicked_resource_ids": [],
-        "top_tags": [],
-    }
-
-def profile_update_after_recs(user_profile: Dict, recommendations: List[Dict], user_query: str) -> Dict:
-    """
-    Returns a minimal mutation you can persist after responding.
-    """
-    seen = set(user_profile.get("seen_resource_ids") or [])
-    for r in recommendations:
-        seen.add(r["id"])
-    return {
-        "append_query_history": {"ts": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()), "text": user_query, "tags": []},
-        "seen_resource_ids": sorted(seen),
-    }

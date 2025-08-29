@@ -19,11 +19,15 @@ import numpy as np
 import faiss
 from recommend import (
     load_resource_index, 
-    profile_update_after_recs, 
     recommend_resources, 
-    is_empty_profile, 
-    create_profile
 )
+from user import (
+    Profile,
+    update_profile,
+    is_empty_profile,
+    profile_update_after_recs
+)
+                
 from sentence_transformers import SentenceTransformer
 
 # -----------------------------
@@ -216,7 +220,7 @@ def build_prompt(query: str, docs: List[Dict]) -> str:
     context = "\n\n".join(parts)
     system = (
         "You are a helpful support assistant for the Shakers platform.\n"
-        "Answer ONLY using the provided context. If the answer is not present, say you don't have that information.\n"
+        "Answer ONLY using the provided context.\n"
         "Be concise and include a 'Sources:' list referencing the SOURCE lines.\n"
     )
     return f"{system}\nContext:\n{context}\n\nUser question:\n{query}\n\nAnswer:"
@@ -231,7 +235,8 @@ def try_gemini(prompt: str) -> Optional[str]:
         model = genai.GenerativeModel("gemini-1.5-flash")
         resp = model.generate_content(prompt)
         return resp.text.strip()
-    except Exception:
+    except Exception as e:
+        print(e)
         return None
 
 def extractive_fallback(query: str, docs: List[Dict]) -> str:
@@ -318,19 +323,6 @@ def ask(index_dir: str, query: str, k: int = 4, oos_threshold: float = 0.22,
             "section": h["section"],
             "source": h["source"],
             "chunk_id": h["id"],
-            "score": round((h["score"] + 1.0) / 2.0, 3)  # normalized 0..1
-        } for h in hits]
-
-    if out_of_scope:
-        answer = "I don't have information on this in the current knowledge base."
-        citations = []
-    else:
-        answer = generate_answer(query, hits)
-        citations = [{
-            "title": h["title"],
-            "section": h["section"],
-            "source": h["source"],
-            "chunk_id": h["id"],
             "score": round((h["score"] + 1.0) / 2.0, 3)
         } for h in hits]
 
@@ -396,9 +388,11 @@ def main():
     args = ap.parse_args()
 
     RESOURCE_JSON = "./kb/resource_catalog.json"
-    user = None
+    with open("./kb/sample_user_profiles.json", "r", encoding="utf-8") as f:
+        profiles = json.load(f)
+    user = Profile.from_dict(profiles[0])
     if is_empty_profile(user):
-        user = create_profile()
+        user = Profile.create()
 
     if args.cmd == "index":
         build_index(args.kb, args.out, chunk_chars=args.chunk_chars, overlap=args.overlap, model=args.model)
