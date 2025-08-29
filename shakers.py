@@ -14,6 +14,8 @@ Env (optional):
 import os, re, json, time, argparse, math, pathlib, textwrap
 from typing import List, Dict, Tuple, Optional
 from dotenv import load_dotenv
+from loguru import logger
+
 
 import numpy as np
 import faiss
@@ -27,6 +29,7 @@ from user import (
     is_empty_profile,
     profile_update_after_recs
 )
+from logging_setup import setup_logging, span
                 
 from sentence_transformers import SentenceTransformer
 
@@ -236,7 +239,7 @@ def try_gemini(prompt: str) -> Optional[str]:
         resp = model.generate_content(prompt)
         return resp.text.strip()
     except Exception as e:
-        print(e)
+        logger.error("llm.error", e)
         return None
 
 def extractive_fallback(query: str, docs: List[Dict]) -> str:
@@ -301,7 +304,8 @@ def ask(index_dir: str, query: str, k: int = 4, oos_threshold: float = 0.22,
     # query = " ".join(enhanced_queries)
 
     t0 = time.perf_counter()
-    vx = VectorIndex.load(index_dir)
+    with span("vector_index.load"):
+        vx = VectorIndex.load(index_dir)
     hits = top_k_search(vx, query, k=k)
 
     out_of_scope = False
@@ -317,7 +321,8 @@ def ask(index_dir: str, query: str, k: int = 4, oos_threshold: float = 0.22,
         answer = "I don't have information on this in the current knowledge base."
         citations = []
     else:
-        answer = generate_answer(query, hits)
+        with span("LLM_request"):
+            answer = generate_answer(query, hits)
         citations = [{
             "title": h["title"],
             "section": h["section"],
@@ -326,14 +331,14 @@ def ask(index_dir: str, query: str, k: int = 4, oos_threshold: float = 0.22,
             "score": round((h["score"] + 1.0) / 2.0, 3)
         } for h in hits]
 
-    # ---- New: Recommendations (optional, only if in-scope and args provided)
-    recommendations: List[Dict] = []
-    profile_delta: Optional[Dict] = None
-    if (not out_of_scope) and resource_catalog_path:
-        model_name = getattr(vx, "model_name", "sentence-transformers/all-MiniLM-L6-v2")
-        res_index = load_resource_index(resource_catalog_path, model_name=model_name)
-        recommendations = recommend_resources(user_profile, query, res_index, k=rec_k)
-        profile_delta = profile_update_after_recs(user_profile, recommendations, query)
+    with span("recommendator"):
+        recommendations: List[Dict] = []
+        profile_delta: Optional[Dict] = None
+        if (not out_of_scope) and resource_catalog_path:
+            model_name = getattr(vx, "model_name", "sentence-transformers/all-MiniLM-L6-v2")
+            res_index = load_resource_index(resource_catalog_path, model_name=model_name)
+            recommendations = recommend_resources(user_profile, query, res_index, k=rec_k)
+            profile_delta = profile_update_after_recs(user_profile, recommendations, query)
 
     latency_ms = int((time.perf_counter() - t0) * 1000)
     return {
@@ -362,13 +367,15 @@ def build_index(kb_dir: str, out_dir: str, chunk_chars=1200, overlap=200, model=
         all_records.extend(recs)
     vx.add(all_records)
     vx.save(out_dir)
-    print(f"Indexed {len(files)} files → {vx.count} chunks → {out_dir}")
+    logger.info("index.end", summary=f"Indexed {len(files)} files → {vx.count} chunks → {out_dir}")
 
 # -----------------------------
 # --------------- MAIN --------
 # -----------------------------
 def main():
     load_dotenv()
+    setup_logging(app_name="rag_minimal")
+
     ap = argparse.ArgumentParser(description="Minimal RAG (Indexer + Retriever + Generator)")
     sub = ap.add_subparsers(dest="cmd", required=True)
 
@@ -395,9 +402,11 @@ def main():
         user = Profile.create()
 
     if args.cmd == "index":
-        build_index(args.kb, args.out, chunk_chars=args.chunk_chars, overlap=args.overlap, model=args.model)
+        with span("index.build"):
+            build_index(args.kb, args.out, chunk_chars=args.chunk_chars, overlap=args.overlap, model=args.model)
     elif args.cmd == "ask":
-        res = ask(args.index, args.q, k=args.k, oos_threshold=args.oos_threshold, user_profile=user, resource_catalog_path=RESOURCE_JSON)
+        with span("response.time"):
+            res = ask(args.index, args.q, k=args.k, oos_threshold=args.oos_threshold, user_profile=user, resource_catalog_path=RESOURCE_JSON)
         print(json.dumps(res, ensure_ascii=False, indent=2))
 
 if __name__ == "__main__":
