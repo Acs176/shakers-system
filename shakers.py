@@ -341,8 +341,7 @@ def ask(index_dir: str, query: str, k: int = 4, oos_threshold: float = 0.22,
         model_name = getattr(vx, "model_name", "sentence-transformers/all-MiniLM-L6-v2")
         res_index = load_resource_index(resource_catalog_path, model_name=model_name)
         recommendations = recommend_resources(user_profile, query, res_index, k=rec_k)
-        if recommendations:
-            profile_delta = profile_update_after_recs(user_profile, recommendations, query)
+        profile_delta = profile_update_after_recs(user_profile, recommendations, query)
 
     latency_ms = int((time.perf_counter() - t0) * 1000)
     return {

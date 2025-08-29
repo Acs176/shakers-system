@@ -144,15 +144,7 @@ def recommend_resources(
     # threshold
     mask = rel >= REC_THRESH
     if not mask.any():
-        ### TODO: HERE I THINK THERE SHOULD BE NO RECOMMENDATION (only recommend when relevant)
-        # return best 1 anyway if absolutely nothing passes threshold
-        top = int(np.argmax(rel))
-        i, r = candidates[top]
-        return [{
-            "id": r["id"], "title": r["title"], "url": r.get("url"),
-            "tags": r.get("tags", []), "why": _why_for(r, user_profile, user_query),
-            "score": round(float(rel[top]), 3)
-        }]
+        return []
 
     idxs = idxs[mask]
     E = E[mask]
