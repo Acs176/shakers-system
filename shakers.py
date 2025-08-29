@@ -17,7 +17,13 @@ from dotenv import load_dotenv
 
 import numpy as np
 import faiss
-from recommend import load_resource_index, profile_update_after_recs, recommend_resources
+from recommend import (
+    load_resource_index, 
+    profile_update_after_recs, 
+    recommend_resources, 
+    is_empty_profile, 
+    create_profile
+)
 from sentence_transformers import SentenceTransformer
 
 # -----------------------------
@@ -284,9 +290,10 @@ def ask(index_dir: str, query: str, k: int = 4, oos_threshold: float = 0.22,
         resource_catalog_path: Optional[str] = None,
         rec_k: int = 3
     ) -> Dict:
-    enhanced_queries = rewrite_queries(query)
-    print(f"enhanced queries: {enhanced_queries}")
-    query = " ".join(enhanced_queries)
+    # Disble for now
+    # enhanced_queries = rewrite_queries(query)
+    # print(f"enhanced queries: {enhanced_queries}")
+    # query = " ".join(enhanced_queries)
 
     t0 = time.perf_counter()
     vx = VectorIndex.load(index_dir)
@@ -330,7 +337,7 @@ def ask(index_dir: str, query: str, k: int = 4, oos_threshold: float = 0.22,
     # ---- New: Recommendations (optional, only if in-scope and args provided)
     recommendations: List[Dict] = []
     profile_delta: Optional[Dict] = None
-    if (not out_of_scope) and user_profile and resource_catalog_path:
+    if (not out_of_scope) and resource_catalog_path:
         model_name = getattr(vx, "model_name", "sentence-transformers/all-MiniLM-L6-v2")
         res_index = load_resource_index(resource_catalog_path, model_name=model_name)
         recommendations = recommend_resources(user_profile, query, res_index, k=rec_k)
@@ -385,14 +392,14 @@ def main():
     ap_ask.add_argument("--index", required=True, help="Folder with vectors.faiss + meta.json")
     ap_ask.add_argument("--q", required=True, help="User query")
     ap_ask.add_argument("--k", type=int, default=4)
-    ap_ask.add_argument("--oos_threshold", type=float, default=0.22)
+    ap_ask.add_argument("--oos_threshold", type=float, default=0.65)
 
     args = ap.parse_args()
 
     RESOURCE_JSON = "./kb/resource_catalog.json"
-    with open("./kb/sample_user_profiles.json", "r", encoding="utf-8") as f:
-        profiles = json.load(f)
-    user = profiles[0]  
+    user = None
+    if is_empty_profile(user):
+        user = create_profile()
 
     if args.cmd == "index":
         build_index(args.kb, args.out, chunk_chars=args.chunk_chars, overlap=args.overlap, model=args.model)

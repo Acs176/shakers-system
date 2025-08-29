@@ -1,0 +1,343 @@
+[
+  {
+    "id": "r_docs_payments_overview",
+    "title": "Payments Overview",
+    "type": "doc",
+    "url": "https://docs.example.com/payments/overview",
+    "tags": [
+      "payments",
+      "billing",
+      "milestones"
+    ],
+    "lang": "en",
+    "description": "How payments, milestones, and payouts work on the platform."
+  },
+  {
+    "id": "r_docs_invoices_faq",
+    "title": "Invoices — FAQ",
+    "type": "doc",
+    "url": "https://docs.example.com/billing/invoices-faq",
+    "tags": [
+      "invoices",
+      "billing",
+      "payments"
+    ],
+    "lang": "es",
+    "description": "Preguntas frecuentes sobre facturas, periodos y estados."
+  },
+  {
+    "id": "r_docs_invoices_vat_eu",
+    "title": "EU VAT & Invoicing Guide",
+    "type": "doc",
+    "url": "https://docs.example.com/billing/eu-vat",
+    "tags": [
+      "invoices",
+      "tax",
+      "eu"
+    ],
+    "lang": "en",
+    "description": "VAT handling and invoice rules for EU-based clients."
+  },
+  {
+    "id": "r_guide_milestones_setup",
+    "title": "Setting Up Milestones & Payouts",
+    "type": "guide",
+    "url": "https://docs.example.com/payments/milestones-setup",
+    "tags": [
+      "payments",
+      "milestones",
+      "billing"
+    ],
+    "lang": "en",
+    "description": "Step-by-step guide to configure milestones and payout schedules."
+  },
+  {
+    "id": "r_policy_disputes",
+    "title": "Dispute Resolution Policy",
+    "type": "policy",
+    "url": "https://docs.example.com/policies/disputes",
+    "tags": [
+      "legal",
+      "policy",
+      "disputes"
+    ],
+    "lang": "en",
+    "description": "Process and timelines for opening and resolving disputes."
+  },
+  {
+    "id": "r_docs_contracts_fixed_price",
+    "title": "Fixed‑Price Contracts",
+    "type": "doc",
+    "url": "https://docs.example.com/contracts/fixed-price",
+    "tags": [
+      "contracts",
+      "legal",
+      "fixed-price"
+    ],
+    "lang": "en",
+    "description": "Creating and managing fixed‑price contracts on the platform."
+  },
+  {
+    "id": "r_article_contracts_tnm_vs_fixed",
+    "title": "Time & Materials vs Fixed‑Price — When to Use Each",
+    "type": "article",
+    "url": "https://blog.example.com/contracts/tnm-vs-fixed",
+    "tags": [
+      "contracts",
+      "legal",
+      "budget"
+    ],
+    "lang": "en",
+    "description": "Pros/cons and choosing the right contract model."
+  },
+  {
+    "id": "r_docs_budgets_ranges",
+    "title": "Budget Ranges & Rate Guidance",
+    "type": "doc",
+    "url": "https://docs.example.com/budget/ranges",
+    "tags": [
+      "budget",
+      "payments"
+    ],
+    "lang": "en",
+    "description": "Typical ranges for roles and seniorities to help plan budgets."
+  },
+  {
+    "id": "r_pool_android_senior",
+    "title": "Talent Pool — Senior Android Developers",
+    "type": "pool",
+    "url": "https://talent.example.com/pools/android-senior",
+    "tags": [
+      "android",
+      "mobile",
+      "hiring"
+    ],
+    "lang": "en",
+    "description": "Curated senior Android engineers with Kotlin/Jetpack Compose."
+  },
+  {
+    "id": "r_pool_android_mid",
+    "title": "Talent Pool — Mid‑Level Android Developers",
+    "type": "pool",
+    "url": "https://talent.example.com/pools/android-mid",
+    "tags": [
+      "android",
+      "mobile",
+      "hiring"
+    ],
+    "lang": "en",
+    "description": "Mid-level Android developers ready for product teams."
+  },
+  {
+    "id": "r_template_job_description_android",
+    "title": "Template — Android Developer Job Description",
+    "type": "template",
+    "url": "https://docs.example.com/templates/jd-android",
+    "tags": [
+      "android",
+      "hiring",
+      "templates"
+    ],
+    "lang": "en",
+    "description": "Starter JD template for Android roles (skills, responsibilities)."
+  },
+  {
+    "id": "r_android_interview_checklist",
+    "title": "Android Interview Checklist",
+    "type": "checklist",
+    "url": "https://docs.example.com/hiring/android-interview-checklist",
+    "tags": [
+      "android",
+      "interviewing",
+      "hiring"
+    ],
+    "lang": "en",
+    "description": "Structured interview checklist for senior Android candidates."
+  },
+  {
+    "id": "r_pool_ios_senior",
+    "title": "Talent Pool — Senior iOS Developers",
+    "type": "pool",
+    "url": "https://talent.example.com/pools/ios-senior",
+    "tags": [
+      "ios",
+      "swift",
+      "mobile",
+      "hiring"
+    ],
+    "lang": "en",
+    "description": "Experienced iOS engineers with Swift and SwiftUI."
+  },
+  {
+    "id": "r_pool_react_mid",
+    "title": "Talent Pool — React/Next.js Developers (Mid)",
+    "type": "pool",
+    "url": "https://talent.example.com/pools/react-mid",
+    "tags": [
+      "react",
+      "nextjs",
+      "frontend",
+      "hiring"
+    ],
+    "lang": "en",
+    "description": "Frontend engineers skilled in React and Next.js."
+  },
+  {
+    "id": "r_pool_seo_consultants",
+    "title": "Talent Pool — SEO Consultants",
+    "type": "pool",
+    "url": "https://talent.example.com/pools/seo-consultants",
+    "tags": [
+      "seo",
+      "marketing",
+      "hiring"
+    ],
+    "lang": "en",
+    "description": "SEO specialists for audits, content strategy, and technical SEO."
+  },
+  {
+    "id": "r_article_seo_technical_audit",
+    "title": "Technical SEO Audit Starter",
+    "type": "article",
+    "url": "https://blog.example.com/seo/technical-audit-starter",
+    "tags": [
+      "seo",
+      "marketing",
+      "frontend"
+    ],
+    "lang": "en",
+    "description": "Checklist and tools to kick off a technical SEO audit."
+  },
+  {
+    "id": "r_article_nextjs_ssr_vs_ssg",
+    "title": "Next.js SSR vs SSG — Tradeoffs",
+    "type": "article",
+    "url": "https://blog.example.com/frontend/nextjs-ssr-vs-ssg",
+    "tags": [
+      "nextjs",
+      "react",
+      "frontend"
+    ],
+    "lang": "en",
+    "description": "Compare rendering strategies for performance and SEO."
+  },
+  {
+    "id": "r_article_terraform_best_practices",
+    "title": "Terraform Best Practices for Teams",
+    "type": "article",
+    "url": "https://blog.example.com/devops/terraform-best-practices",
+    "tags": [
+      "terraform",
+      "devops",
+      "aws"
+    ],
+    "lang": "en",
+    "description": "Modular code, workspaces, and CI tips for Terraform at scale."
+  },
+  {
+    "id": "r_pool_devops_senior",
+    "title": "Talent Pool — Senior DevOps/SRE",
+    "type": "pool",
+    "url": "https://talent.example.com/pools/devops-senior",
+    "tags": [
+      "devops",
+      "sre",
+      "aws",
+      "hiring"
+    ],
+    "lang": "en",
+    "description": "Senior DevOps/SRE engineers with AWS, Terraform, Kubernetes."
+  },
+  {
+    "id": "r_docs_sre_incident_playbooks",
+    "title": "SRE Incident Response Playbooks",
+    "type": "doc",
+    "url": "https://docs.example.com/sre/incident-playbooks",
+    "tags": [
+      "sre",
+      "process",
+      "devops"
+    ],
+    "lang": "en",
+    "description": "Sample playbooks and runbooks for common incidents."
+  },
+  {
+    "id": "r_article_mlops_pipelines",
+    "title": "Designing MLOps Pipelines",
+    "type": "article",
+    "url": "https://blog.example.com/mlops/pipelines",
+    "tags": [
+      "mlops",
+      "deployment",
+      "data-science"
+    ],
+    "lang": "es",
+    "description": "Buenas prácticas para orquestar y desplegar modelos."
+  },
+  {
+    "id": "r_pool_ds_senior",
+    "title": "Talent Pool — Senior Data Scientists",
+    "type": "pool",
+    "url": "https://talent.example.com/pools/data-science-senior",
+    "tags": [
+      "data-science",
+      "mlops",
+      "hiring"
+    ],
+    "lang": "en",
+    "description": "Data scientists with production ML and experimentation."
+  },
+  {
+    "id": "r_comparison_llm_inference_costs",
+    "title": "LLM Inference Costs — Groq vs Gemini vs OpenAI",
+    "type": "comparison",
+    "url": "https://blog.example.com/ai/inference-costs-comparison",
+    "tags": [
+      "costs",
+      "ai",
+      "inference"
+    ],
+    "lang": "en",
+    "description": "Head-to-head comparison of throughput and $/token."
+  },
+  {
+    "id": "r_article_prompt_injection_defense",
+    "title": "Defending Against Prompt Injection",
+    "type": "article",
+    "url": "https://blog.example.com/ai/prompt-injection-defense",
+    "tags": [
+      "security",
+      "prompt-injection",
+      "ai"
+    ],
+    "lang": "en",
+    "description": "Threat models and mitigations for LLM apps."
+  },
+  {
+    "id": "r_pool_ai_engineers",
+    "title": "Talent Pool — AI/LLM Engineers",
+    "type": "pool",
+    "url": "https://talent.example.com/pools/ai-llm-engineers",
+    "tags": [
+      "ai",
+      "llm",
+      "rag",
+      "hiring"
+    ],
+    "lang": "en",
+    "description": "Engineers with RAG, vector DBs, and prompt engineering."
+  },
+  {
+    "id": "r_docs_rag_architecture_basics",
+    "title": "RAG Architecture — Basics",
+    "type": "doc",
+    "url": "https://docs.example.com/ai/rag-basics",
+    "tags": [
+      "rag",
+      "ai",
+      "retrieval"
+    ],
+    "lang": "en",
+    "description": "Key components: embeddings, retrievers, context windows."
+  }
+]

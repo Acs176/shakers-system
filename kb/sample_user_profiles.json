@@ -1,0 +1,202 @@
+[
+  {
+    "user_id": "u_001",
+    "name": "Ava Holm",
+    "locale": "en",
+    "created_at": "2025-06-02T09:13:22Z",
+    "last_active": "2025-08-27T16:40:00Z",
+    "query_history": [
+      {
+        "ts": "2025-08-12T10:05:00Z",
+        "text": "I need an Android developer with 8 years of experience.",
+        "tags": ["android", "mobile", "hiring"]
+      },
+      {
+        "ts": "2025-08-12T10:07:00Z",
+        "text": "What are Shakers' payment terms?",
+        "tags": ["payments", "billing"]
+      },
+      {
+        "ts": "2025-08-18T14:22:00Z",
+        "text": "Do you support time-and-materials contracts?",
+        "tags": ["contracts", "legal"]
+      },
+      {
+        "ts": "2025-08-25T09:01:00Z",
+        "text": "Best practices to screen senior Android candidates.",
+        "tags": ["android", "interviewing"]
+      }
+    ],
+    "seen_resource_ids": ["r_docs_payments_overview", "r_pool_android_senior", "r_article_contracts_tnm_vs_fixed"],
+    "clicked_resource_ids": ["r_android_interview_checklist"],
+    "top_tags": ["android", "contracts", "payments"]
+  },
+  {
+    "user_id": "u_002",
+    "name": "Luis Martín",
+    "locale": "es",
+    "created_at": "2025-05-19T12:10:00Z",
+    "last_active": "2025-08-26T11:02:00Z",
+    "query_history": [
+      {
+        "ts": "2025-08-05T08:15:00Z",
+        "text": "Necesito un científico de datos con experiencia en MLOps.",
+        "tags": ["data-science", "mlops", "hiring"]
+      },
+      {
+        "ts": "2025-08-05T08:18:00Z",
+        "text": "¿Cómo funcionan las facturas?",
+        "tags": ["invoices", "billing"]
+      },
+      {
+        "ts": "2025-08-20T15:30:00Z",
+        "text": "Pipeline de despliegue para modelos en producción.",
+        "tags": ["mlops", "deployment"]
+      }
+    ],
+    "seen_resource_ids": ["r_pool_ds_senior", "r_docs_invoices_faq"],
+    "clicked_resource_ids": ["r_article_mlops_pipelines"],
+    "top_tags": ["mlops", "data-science", "invoices"]
+  },
+  {
+    "user_id": "u_003",
+    "name": "Maya Chen",
+    "locale": "en",
+    "created_at": "2025-07-01T09:00:00Z",
+    "last_active": "2025-08-28T07:55:00Z",
+    "query_history": [
+      {
+        "ts": "2025-08-10T13:40:00Z",
+        "text": "Looking for a React/Next.js developer for a marketing site.",
+        "tags": ["react", "nextjs", "frontend", "hiring"]
+      },
+      {
+        "ts": "2025-08-10T13:45:00Z",
+        "text": "Do you offer SEO specialists?",
+        "tags": ["seo", "marketing"]
+      },
+      {
+        "ts": "2025-08-22T09:10:00Z",
+        "text": "How are milestones and payouts configured?",
+        "tags": ["payments", "milestones"]
+      }
+    ],
+    "seen_resource_ids": ["r_pool_react_mid", "r_pool_seo_consultants"],
+    "clicked_resource_ids": ["r_guide_milestones_setup"],
+    "top_tags": ["react", "nextjs", "seo"]
+  },
+  {
+    "user_id": "u_004",
+    "name": "Jonas Berg",
+    "locale": "en",
+    "created_at": "2025-04-12T10:33:00Z",
+    "last_active": "2025-08-21T18:05:00Z",
+    "query_history": [
+      {
+        "ts": "2025-07-29T16:20:00Z",
+        "text": "SRE with AWS and Terraform experience.",
+        "tags": ["devops", "aws", "terraform", "hiring"]
+      },
+      {
+        "ts": "2025-08-03T09:00:00Z",
+        "text": "Incident response playbooks supported in the platform?",
+        "tags": ["sre", "process"]
+      },
+      {
+        "ts": "2025-08-17T12:33:00Z",
+        "text": "Budget ranges for senior DevOps roles.",
+        "tags": ["devops", "budget"]
+      }
+    ],
+    "seen_resource_ids": ["r_pool_devops_senior", "r_article_terraform_best_practices"],
+    "clicked_resource_ids": ["r_docs_budgets_ranges"],
+    "top_tags": ["devops", "aws", "sre"]
+  },
+  {
+    "user_id": "u_005",
+    "name": "Sofia Rossi",
+    "locale": "en",
+    "created_at": "2025-03-30T14:00:00Z",
+    "last_active": "2025-08-24T10:12:00Z",
+    "query_history": [
+      {
+        "ts": "2025-08-01T11:05:00Z",
+        "text": "How do contracts work for fixed-price projects?",
+        "tags": ["contracts", "legal", "fixed-price"]
+      },
+      {
+        "ts": "2025-08-01T11:07:00Z",
+        "text": "Invoice schedule and VAT handling for EU clients.",
+        "tags": ["invoices", "tax", "eu"]
+      },
+      {
+        "ts": "2025-08-14T08:25:00Z",
+        "text": "Dispute resolution policy.",
+        "tags": ["legal", "policy"]
+      }
+    ],
+    "seen_resource_ids": ["r_docs_contracts_fixed_price", "r_docs_invoices_vat_eu", "r_policy_disputes"],
+    "clicked_resource_ids": ["r_docs_contracts_fixed_price", "r_docs_invoices_vat_eu"],
+    "top_tags": ["contracts", "invoices", "legal"]
+  },
+  {
+    "user_id": "u_006",
+    "name": "Arjun Patel",
+    "locale": "en",
+    "created_at": "2025-08-10T10:00:00Z",
+    "last_active": "2025-08-27T19:20:00Z",
+    "query_history": [
+      {
+        "ts": "2025-08-11T10:10:00Z",
+        "text": "iOS Swift developer for fintech app.",
+        "tags": ["ios", "swift", "mobile", "hiring"]
+      },
+      {
+        "ts": "2025-08-19T09:50:00Z",
+        "text": "Switching from iOS to Android—how to compare candidate pools?",
+        "tags": ["android", "mobile", "hiring"]
+      }
+    ],
+    "seen_resource_ids": ["r_pool_ios_senior", "r_pool_android_mid"],
+    "clicked_resource_ids": ["r_template_job_description_android"],
+    "top_tags": ["android", "ios", "mobile"]
+  },
+  {
+    "user_id": "u_007",
+    "name": "Nadia Yusuf",
+    "locale": "en",
+    "created_at": "2025-02-18T08:00:00Z",
+    "last_active": "2025-08-27T08:40:00Z",
+    "query_history": [
+      {
+        "ts": "2025-08-09T13:10:00Z",
+        "text": "LLM chatbot developer with retrieval experience.",
+        "tags": ["ai", "llm", "rag", "hiring"]
+      },
+      {
+        "ts": "2025-08-09T13:14:00Z",
+        "text": "Best practices for prompt injection defenses.",
+        "tags": ["security", "prompt-injection"]
+      },
+      {
+        "ts": "2025-08-26T17:05:00Z",
+        "text": "Cost estimates for running Groq/Gemini vs OpenAI.",
+        "tags": ["costs", "ai", "inference"]
+      }
+    ],
+    "seen_resource_ids": ["r_pool_ai_engineers", "r_article_prompt_injection_defense"],
+    "clicked_resource_ids": ["r_comparison_llm_inference_costs"],
+    "top_tags": ["ai", "security", "rag"]
+  },
+  {
+    "user_id": "u_008",
+    "name": "Carlos Ortega",
+    "locale": "es",
+    "created_at": "2025-08-25T09:00:00Z",
+    "last_active": "2025-08-28T07:30:00Z",
+    "query_history": [],
+    "seen_resource_ids": [],
+    "clicked_resource_ids": [],
+    "top_tags": []
+  }
+]
