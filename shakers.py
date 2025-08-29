@@ -23,6 +23,8 @@ from recommend import (
     load_resource_index, 
     recommend_resources, 
 )
+from metrics_setup import init_metrics, time_histogram
+
 from user import (
     Profile,
     update_profile,
@@ -296,21 +298,25 @@ def generate_answer(query: str, docs: List[Dict]) -> str:
 def ask(index_dir: str, query: str, k: int = 4, oos_threshold: float = 0.22,
         user_profile: Optional[Dict] = None,
         resource_catalog_path: Optional[str] = None,
-        rec_k: int = 3
+        rec_k: int = 3,
+        METRICS=None,
     ) -> Dict:
     # Disble for now
     # enhanced_queries = rewrite_queries(query)
     # print(f"enhanced queries: {enhanced_queries}")
     # query = " ".join(enhanced_queries)
-
+    METRICS["requests_total"].add(1)
     t0 = time.perf_counter()
+    ## TODO: MOVE THIS OUT WHEN HAVING A LOOP
     with span("vector_index.load"):
         vx = VectorIndex.load(index_dir)
-    hits = top_k_search(vx, query, k=k)
+    with time_histogram(METRICS["retrieval_latency_ms"], k=k):
+        hits = top_k_search(vx, query, k=k)
 
     out_of_scope = False
     if not hits:
         out_of_scope = True
+        METRICS["out_of_scope_total"].add(1)
     else:
         max_sim = max(h["score"] for h in hits)
         # Convert inner product (cosine) [-1,1] to [0,1] if you want a human-friendly score
@@ -322,7 +328,8 @@ def ask(index_dir: str, query: str, k: int = 4, oos_threshold: float = 0.22,
         citations = []
     else:
         with span("LLM_request"):
-            answer = generate_answer(query, hits)
+            with time_histogram(METRICS["llm_latency_ms"]):
+                answer = generate_answer(query, hits)
         citations = [{
             "title": h["title"],
             "section": h["section"],
@@ -375,6 +382,7 @@ def build_index(kb_dir: str, out_dir: str, chunk_chars=1200, overlap=200, model=
 def main():
     load_dotenv()
     setup_logging(app_name="rag_minimal")
+    METRICS = init_metrics("rag_minimal")
 
     ap = argparse.ArgumentParser(description="Minimal RAG (Indexer + Retriever + Generator)")
     sub = ap.add_subparsers(dest="cmd", required=True)
@@ -405,8 +413,8 @@ def main():
         with span("index.build"):
             build_index(args.kb, args.out, chunk_chars=args.chunk_chars, overlap=args.overlap, model=args.model)
     elif args.cmd == "ask":
-        with span("response.time"):
-            res = ask(args.index, args.q, k=args.k, oos_threshold=args.oos_threshold, user_profile=user, resource_catalog_path=RESOURCE_JSON)
+        with time_histogram(METRICS["end_to_end_latency_ms"]):
+            res = ask(args.index, args.q, k=args.k, oos_threshold=args.oos_threshold, user_profile=user, resource_catalog_path=RESOURCE_JSON, METRICS=METRICS)
         print(json.dumps(res, ensure_ascii=False, indent=2))
 
 if __name__ == "__main__":
