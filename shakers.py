@@ -359,7 +359,7 @@ def ask(index_dir: str, query: str, k: int = 4, oos_threshold: float = 0.22,
 # -----------------------------
 def build_index(kb_dir: str, out_dir: str, chunk_chars=1200, overlap=200, model="sentence-transformers/all-MiniLM-L6-v2"):
     kb = pathlib.Path(kb_dir)
-    files = sorted([p for p in kb.glob("*.md") if p.is_file()])
+    files = sorted([p for p in kb.rglob("*.md") if p.is_file()])
     if not files:
         raise SystemExit(f"No markdown files found in {kb_dir}")
 
