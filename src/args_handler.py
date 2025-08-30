@@ -15,6 +15,7 @@ def setup_args():
     ap_ask.add_argument("--index", required=True, help="Folder with vectors.faiss + meta.json")
     ap_ask.add_argument("--q", required=True, help="User query")
     ap_ask.add_argument("--k", type=int, default=4)
+    ap_ask.add_argument("--uid", type=str, default="")
     ap_ask.add_argument("--oos_threshold", type=float, default=0.65)
 
     args = ap.parse_args()

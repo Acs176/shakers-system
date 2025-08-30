@@ -12,7 +12,7 @@ from src.app.user.user import (
     Profile,
     is_empty_profile,
 )
-from concurrent.futures import ThreadPoolExecutor
+from src.app.user.db import init_db, create_profile, get_profile, record_query, append_seen
 
 
 RESOURCE_JSON = "./kb/resource_catalog.json"
@@ -32,20 +32,22 @@ if __name__ == "__main__":
     ## Load DBs
     vx = VectorIndex.load(args.index) ## TODO: Handle error
     ri = load_resource_index(RESOURCE_JSON)
-    ## TODO: replace with userDB
-    with open("./kb/sample_user_profiles.json", "r", encoding="utf-8") as f:
-        profiles = json.load(f)
-    user = Profile.from_dict(profiles[0])
-    if is_empty_profile(user):
-        user = Profile.create()
+    init_db() ## userDB
+
+    profile = get_profile(args.uid)
+    if profile is None:
+        profile = create_profile()
 
     recommender = Recommender(ri)
     rag_orch = RagOrchestrator(os.getenv("LLM_PROVIDER"), os.getenv("GEMINI_API_KEY"), vx, args.oos_threshold)
-    recommendations = recommender.recommend(user, query)
+    recommendations = recommender.recommend(profile, query)
     resp = rag_orch.get_grounded_response(query)
    
     print(json.dumps(resp, ensure_ascii=False, indent=2))
     print(json.dumps(recommendations, ensure_ascii=False, indent=2))
+
+    record_query(profile, query)
+    append_seen(profile, [rec["id"] for rec in recommendations])
 
     ## load envs
     ## init logs
