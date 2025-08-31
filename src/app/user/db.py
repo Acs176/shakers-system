@@ -4,6 +4,7 @@ from contextlib import contextmanager
 from typing import List, Optional, Tuple
 from datetime import datetime, timezone
 import uuid
+from loguru import logger
 
 from src.app.user.user import Profile, Query
 
@@ -84,6 +85,7 @@ def init_db():
           FOREIGN KEY (user_id) REFERENCES profiles(user_id)
         );
         """)
+        logger.info("loaded user db")
 
 def create_profile(name: Optional[str] = None, locale: str = "en") -> Profile:
     now = _now_utc()
@@ -205,11 +207,13 @@ def record_query(profile: Profile, query: str, tags: Optional[List[str]] = None)
             "UPDATE profiles SET last_active = ? WHERE user_id = ?",
             (_dt_to_iso_z(ts), profile.user_id),
         )
+        logger.info("query saved to user profile")
     # update in-memory
     profile.last_active = ts
     profile.query_history.append(Query(ts=ts, text=query, tags=tags or []))
 
 def append_seen(profile: Profile, resource_ids: List[str]) -> None:
+    logger.info(f"adding {resource_ids} to user's seen resources")
     if not resource_ids:
         return
     with _conn() as con:

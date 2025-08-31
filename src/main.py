@@ -30,9 +30,12 @@ if __name__ == "__main__":
 
     query = args.q
     ## Load DBs
-    vx = VectorIndex.load(args.index) ## TODO: Handle error
+    with span("vector_index.load"):
+        vx = VectorIndex.load(args.index) ## TODO: Handle error
+    
     ri = load_resource_index(RESOURCE_JSON)
-    init_db() ## userDB
+    with span("user_db.init"):
+        init_db() ## userDB
 
     profile = get_profile(args.uid)
     if profile is None:
@@ -40,8 +43,10 @@ if __name__ == "__main__":
 
     recommender = Recommender(ri)
     rag_orch = RagOrchestrator(os.getenv("LLM_PROVIDER"), os.getenv("GEMINI_API_KEY"), vx, args.oos_threshold)
-    recommendations = recommender.recommend(profile, query)
-    resp = rag_orch.get_grounded_response(query)
+    with span("recommend.run"):
+        recommendations = recommender.recommend(profile, query)
+    with span("rag.run"):
+        resp = rag_orch.get_grounded_response(query)
    
     print(json.dumps(resp, ensure_ascii=False, indent=2))
     print(json.dumps(recommendations, ensure_ascii=False, indent=2))
