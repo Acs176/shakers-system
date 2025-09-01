@@ -10,6 +10,7 @@ It includes:
 ## Getting Started
 
 1. Create a Virtual Environment
+
 It’s recommended to use a virtual environment to isolate dependencies. I DO NOT INCLUDE MY VENV due to large files and it's in general a bad practice.
 Creating a virtual environment and installing the dependencies takes around 2 minutes:
 ```bash
@@ -21,7 +22,14 @@ venv\Scripts\activate      # On Windows
 ```bash
 pip install -r requirements.txt
 ```
-3. Run the Application
+3. Build the vector store
+
+The documents are stored in the /kb folder, you just need to indicate the path where the index will end up (I used "/rag_index" as default in the rest of the code).
+```bash
+python -m src.app.data_ingestor.build_index_script ./kb ./index_output_path
+```
+
+4. Run the Application
 ```bash
 python -m src.main
 ```
