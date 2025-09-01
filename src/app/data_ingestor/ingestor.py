@@ -1,8 +1,12 @@
 import re, pathlib
+import hashlib
 from typing import List, Dict, Tuple
 
 H1 = re.compile(r'^\s*#\s+(.*)$', re.MULTILINE)
 H2_SPLIT = re.compile(r'^\s*##\s+(.*)$', re.MULTILINE)
+
+def content_hash(text: str) -> str:
+    return hashlib.sha256(text.encode("utf-8")).hexdigest()
 
 def read_markdown(path: pathlib.Path) -> str:
     return path.read_text(encoding="utf-8", errors="ignore")
@@ -87,6 +91,7 @@ def md_to_chunks(md_text: str, source_name: str, chunk_chars=1200, overlap=200) 
                 "title": title,
                 "section": sec_title or "Summary",
                 "source": source_name,
-                "text": part
+                "text": part,
+                "hash": content_hash(part) ## chunk hashing for re-index
             })
     return items
