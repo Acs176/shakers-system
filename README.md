@@ -33,6 +33,20 @@ python -m src.app.data_ingestor.build_index_script ./kb ./index_output_path
 ```bash
 python -m src.main
 ```
+
+## Making requests
+Use CURL or Postman to hit the backend on localhost:8000. There's an /ask endpoint exposed:
+
+```bash
+curl -X POST "http://localhost:8000/ask" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "q": "do you have AI developers?",
+    "uid": "u_377e7b"
+  }' # Linux
+
+curl -X POST "http://localhost:8000/ask" -H "Content-Type: application/json" -d "{ \"q\": \"do you have AI developers?\", \"uid\": \"u_377e7b\" }" # Windows (can't paste multiline)
+```
 📂 Project Structure
 ```bash
 src/
