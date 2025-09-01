@@ -22,14 +22,30 @@ venv\Scripts\activate      # On Windows
 ```bash
 pip install -r requirements.txt
 ```
-3. Build the vector store
+
+3. ENVIRONMENT VARIABLES
+
+I included a `.env.example` file. (The OTEL variables are NOT necessary in order to run the app)
+
+```bash
+GEMINI_API_KEY=""                           ## Your API key
+LLM_PROVIDER="gemini"
+OTEL_RESOURCE_ATTRIBUTES=""                 ## NO NEED TO FILL
+OTEL_EXPORTER_OTLP_ENDPOINT=""              ## NO NEED TO FILL
+OTEL_EXPORTER_OTLP_HEADERS=""               ## NO NEED TO FILL
+OTEL_EXPORTER_OTLP_PROTOCOL="http/protobuf" ## NO NEED TO FILL
+VECTOR_INDEX_PATH=""                        ## The path where you saved your vector index
+KNOWLEDGE_BASE_PATH="./kb"                  ## leave this one if you don't change the default path
+```
+
+4. Build the vector store
 
 The documents are stored in the /kb folder, you just need to indicate the path where the index will end up (I used "/rag_index" as default in the rest of the code).
 ```bash
 python -m src.app.data_ingestor.build_index_script ./kb ./index_output_path
 ```
 
-4. Run the Application
+5. Run the Application
 ```bash
 python -m src.main
 ```
