@@ -1,0 +1,104 @@
+[
+  {
+    "id": "qa_001",
+    "question": "What is Shakers and what problems does it solve?",
+    "expected_answer": "Shakers is a SaaS platform that connects companies with freelance talent and provides tools for onboarding, project management, payments, contracts, and compliance.",
+    "source_docs": ["kb/overview.md"]
+  },
+  {
+    "id": "qa_002",
+    "question": "Outline the payment flow for a milestone on Shakers.",
+    "expected_answer": "The client funds a milestone, funds are held in escrow, the freelancer submits work, the client approves the milestone, and funds are released.",
+    "source_docs": ["kb/payments.md"]
+  },
+  {
+    "id": "qa_003",
+    "question": "Are refunds possible before a milestone is approved?",
+    "expected_answer": "Yes. Refunds are possible before the milestone is approved.",
+    "source_docs": ["kb/payments.md"]
+  },
+  {
+    "id": "qa_004",
+    "question": "How long do payouts to freelancers typically take after approval?",
+    "expected_answer": "Payouts to freelancers are processed within about 3–5 business days.",
+    "source_docs": ["kb/payments.md"]
+  },
+  {
+    "id": "qa_005",
+    "question": "How are invoices generated on Shakers?",
+    "expected_answer": "Invoices are created automatically once a milestone is approved and include client and freelancer details, reference project and milestone IDs, and can be exported as PDF.",
+    "source_docs": ["kb/invoicing.md"]
+  },
+  {
+    "id": "qa_006",
+    "question": "Does Shakers calculate VAT or sales tax on invoices?",
+    "expected_answer": "Yes. VAT and sales tax are calculated automatically when applicable, and tax summary reports are available in the Finance dashboard.",
+    "source_docs": ["kb/invoicing.md"]
+  },
+  {
+    "id": "qa_007",
+    "question": "What security features does Shakers offer?",
+    "expected_answer": "Shakers uses data encryption at rest and in transit, supports 2FA, applies role-based access control, and conducts regular security audits.",
+    "source_docs": ["kb/security.md"]
+  },
+  {
+    "id": "qa_008",
+    "question": "List the main user roles and their scopes.",
+    "expected_answer": "Admin: full access including billing and settings. Manager: manage projects and freelancers. Member: limited to assigned projects. Freelancer: access only to invited projects. Permissions are managed at the workspace level.",
+    "source_docs": ["kb/roles.md"]
+  },
+  {
+    "id": "qa_009",
+    "question": "What are the steps to onboard a new company user?",
+    "expected_answer": "Sign up with a company email, verify the email address, create an organization workspace, and add team members with role permissions.",
+    "source_docs": ["kb/onboarding.md"]
+  },
+  {
+    "id": "qa_010",
+    "question": "Define a milestone and escrow in the context of Shakers.",
+    "expected_answer": "A milestone is a deliverable within a project tied to payment. Escrow is a secure holding account for client funds.",
+    "source_docs": ["kb/glossary.md"]
+  },
+  {
+    "id": "qa_011",
+    "question": "How does the dispute resolution process work?",
+    "expected_answer": "A user submits a dispute request, Shakers support mediates, and the outcome may adjust the payout.",
+    "source_docs": ["kb/disputes.md"]
+  },
+  {
+    "id": "qa_012",
+    "question": "What plans does Shakers offer and how is billing handled?",
+    "expected_answer": "Shakers offers Free (limited projects, community support), Pro (unlimited projects, priority support), and Enterprise (custom solutions, dedicated manager) plans. Billing can be monthly or annual with discounts for annual payments.",
+    "source_docs": ["kb/pricing.md"]
+  },
+  {
+    "id": "qa_013",
+    "question": "What criteria does the matching algorithm consider?",
+    "expected_answer": "It considers skills match, availability, and past performance ratings.",
+    "source_docs": ["kb/matching.md"]
+  },
+  {
+    "id": "qa_014",
+    "question": "How are projects structured and how is time tracked?",
+    "expected_answer": "Projects are organized into milestones with deliverables, deadlines, and progress tracking. Time tracking is optional per milestone and activity reports can be exported.",
+    "source_docs": ["kb/projects.md"]
+  },
+  {
+    "id": "qa_015",
+    "question": "How can a user troubleshoot a 'Login failed' issue?",
+    "expected_answer": "Check email verification and try a password reset. If issues persist, verify account permissions and contact support.",
+    "source_docs": ["kb/faq.md"]
+  },
+  {
+    "id": "qa_016",
+    "question": "What are best practices around contracts and NDAs on Shakers?",
+    "expected_answer": "Every project has a digital contract with IP assignment and optional NDA. Review contracts before inviting freelancers and use NDAs for sensitive information.",
+    "source_docs": ["kb/contracts.md"]
+  },
+  {
+    "id": "qa_017",
+    "question": "What are the typical steps in the talent vetting process?",
+    "expected_answer": "Profile completeness check, skills assessment (tests and portfolio review), interview with the talent team, and ongoing performance reviews. Only verified freelancers are visible to clients.",
+    "source_docs": ["kb/vetting.md"]
+  }
+]
