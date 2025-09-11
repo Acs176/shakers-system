@@ -42,6 +42,9 @@ on:
         required: false
         default: '0.8'
 
+  pull_request:
+    types: [opened, synchronize, labeled, reopened]
+
 jobs:
   qa-eval:
     # Manual via Actions tab, or labeled PR (label: qa-eval)
@@ -135,9 +138,6 @@ jobs:
 
       - name: Upload QA report
         uses: actions/upload-artifact@v4
-  pull_request:
-    types: [opened, synchronize, labeled, reopened]
-        if: always()
         with:
           name: qa-eval-report
           path: qa_eval_report.json
