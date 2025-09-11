@@ -1,116 +1,24 @@
 import argparse
 import json
 import pathlib
-import re
-from typing import Dict, List, Tuple
-
-import numpy as np
-from sentence_transformers import SentenceTransformer
+from typing import Dict
 
 from src.app.data_ingestor.vector_index import VectorIndex
 from src.app.rag.orchestrator import RagOrchestrator
-import sacrebleu
-from rouge_score import rouge_scorer as _rouge_scorer
-
-def _strip_sources_footer(s: str) -> str:
-    return re.split(r"\n\s*Sources:\s*", s, maxsplit=1)[0]
+from src.eval.ragas_faithfulness import compute_faithfulness
+from src.eval.syntactic import prf1, strip_sources_footer, rouge_scores, sentence_bleu
+from src.eval.semantic import semantic_similarity
 
 
-def _normalize_text(s: str) -> str:
-    # Strip RAG "Sources:" footer if present
-    s = _strip_sources_footer(s)
-    # Lowercase and remove punctuation-like chars
-    s = s.lower()
-    s = re.sub(r"[\u2018\u2019\u201C\u201D]", "'", s)  # normalize quotes
-    s = re.sub(r"[^a-z0-9\s]", " ", s)
-    s = re.sub(r"\s+", " ", s).strip()
-    return s
-
-
-def _tokenize(s: str) -> List[str]:
-    return [t for t in _normalize_text(s).split(" ") if t]
-
-
-def prf1(pred: str, gold: str) -> Tuple[float, float, float]:
-    """Bag-of-words precision/recall/F1 computed with token counts."""
-    ptoks = _tokenize(pred)
-    gtoks = _tokenize(gold)
-    if not ptoks and not gtoks:
-        return 1.0, 1.0, 1.0
-    if not ptoks:
-        return 0.0, 0.0, 0.0
-    if not gtoks:
-        return 0.0, 0.0, 0.0
-
-    from collections import Counter
-
-    pc = Counter(ptoks)
-    gc = Counter(gtoks)
-    overlap = sum(min(pc[w], gc[w]) for w in pc.keys() | gc.keys())
-    precision = overlap / max(1, sum(pc.values()))
-    recall = overlap / max(1, sum(gc.values()))
-    if precision + recall == 0:
-        f1 = 0.0
-    else:
-        f1 = 2 * precision * recall / (precision + recall)
-    return precision, recall, f1
-
-_EVAL_MODEL = None
-def semantic_similarity(pred: str, gold: str, model_name: str = "sentence-transformers/all-mpnet-base-v2") -> float:
-    """
-    Cosine similarity between contextual embeddings of predicted and expected answers.
-    Uses a separate sentence-transformer model from the retriever to avoid bias.
-    Returns a score in [-1, 1], typically [0, 1] after normalization.
-    """
-    global _EVAL_MODEL
-    # Handle trivial cases
-    if not pred and not gold:
-        return 1.0
-    if not pred or not gold:
-        return 0.0
-    
-    if _EVAL_MODEL is None or getattr(_EVAL_MODEL, "model_name_or_path", None) != model_name:
-        _EVAL_MODEL = SentenceTransformer(model_name)
-    vecs = _EVAL_MODEL.encode([pred, gold], normalize_embeddings=True)
-    if not isinstance(vecs, np.ndarray):
-        vecs = np.array(vecs, dtype="float32")
-    v1, v2 = vecs[0].astype("float32"), vecs[1].astype("float32")
-    return float(np.dot(v1, v2))
-
-
-
-
-_ROUGE_SCORER = None
-
-
-def sentence_bleu(pred: str, gold: str) -> float:
-    """Sentence BLEU via sacrebleu; returns 0..1. Requires sacrebleu."""
-    if not pred and not gold:
-        return 1.0
-    if not pred or not gold:
-        return 0.0
-    # sacrebleu returns percentage 0..100
-    return float(sacrebleu.sentence_bleu(pred, [gold]).score) / 100.0
-
-
-def rouge_scores(pred: str, gold: str) -> Dict[str, float]:
-    """ROUGE-1/2/L F1 via rouge-score; returns values 0..1. Requires rouge-score."""
-    if not pred and not gold:
-        return {"rouge1": 1.0, "rouge2": 1.0, "rougeL": 1.0}
-    if not pred or not gold:
-        return {"rouge1": 0.0, "rouge2": 0.0, "rougeL": 0.0}
-    global _ROUGE_SCORER
-    if _ROUGE_SCORER is None:
-        _ROUGE_SCORER = _rouge_scorer.RougeScorer(["rouge1", "rouge2", "rougeL"], use_stemmer=True)
-    # RougeScorer.score expects target (reference), prediction
-    sc = _ROUGE_SCORER.score(gold, pred)
-    return {
-        "rouge1": float(sc["rouge1"].fmeasure),
-        "rouge2": float(sc["rouge2"].fmeasure),
-        "rougeL": float(sc["rougeL"].fmeasure),
-    }
-
-def evaluate(dataset_path: str, index_dir: str, oos_threshold: float = 0.2, provider: str = "none", api_key: str = "", sim_model: str = "sentence-transformers/all-mpnet-base-v2") -> Dict:
+def evaluate(
+    dataset_path: str, 
+    index_dir: str, 
+    oos_threshold: float = 0.2, 
+    provider: str = "none", 
+    api_key: str = "", 
+    sim_model: str = "sentence-transformers/all-mpnet-base-v2", 
+    with_faithfulness: bool = False, 
+    ) -> Dict:
     
     vx = VectorIndex.load(index_dir)
     rag = RagOrchestrator(provider, api_key, vx, oos_threshold)
@@ -119,17 +27,29 @@ def evaluate(dataset_path: str, index_dir: str, oos_threshold: float = 0.2, prov
 
     results = []
     p_sum = r_sum = f_sum = s_sum = b_sum = r1_sum = r2_sum = rl_sum = 0.0
+    faith_sum = 0.0
+    faith_count = 0
     for item in ds:
         q = item["question"]
         gold = item["expected_answer"]
-        out = rag.get_grounded_response(q)
+        out = rag.get_grounded_response(q, include_contexts=with_faithfulness)
         pred = out.get("answer", "")
         # Use answer body (strip 'Sources:' footer) for text metrics
-        pred_body = _strip_sources_footer(pred)
+        pred_body = strip_sources_footer(pred)
         p, r, f = prf1(pred_body, gold)
         s = semantic_similarity(pred_body, gold, model_name=sim_model)
         b = sentence_bleu(pred_body, gold)
         rouge = rouge_scores(pred_body, gold)
+        faith = None
+        if with_faithfulness:
+            try:
+                contexts = out.get("contexts") or []
+                if contexts:
+                    faith = compute_faithfulness(q, pred_body, contexts, provider=provider, api_key=(api_key or None))
+                    faith_sum += float(faith)
+                    faith_count += 1
+            except Exception as e:
+                faith = None
         p_sum += p; r_sum += r; f_sum += f; s_sum += s; b_sum += b
         r1_sum += rouge["rouge1"]; r2_sum += rouge["rouge2"]; rl_sum += rouge["rougeL"]
         results.append({
@@ -145,7 +65,9 @@ def evaluate(dataset_path: str, index_dir: str, oos_threshold: float = 0.2, prov
             "rouge1": round(rouge["rouge1"], 4),
             "rouge2": round(rouge["rouge2"], 4),
             "rougeL": round(rouge["rougeL"], 4),
+            "faithfulness": None if faith is None else round(float(faith), 4),
             "citations": out.get("citations"),
+            "contexts": out.get("contexts") if with_faithfulness else None,
         })
 
     n = max(1, len(results))
@@ -159,6 +81,7 @@ def evaluate(dataset_path: str, index_dir: str, oos_threshold: float = 0.2, prov
         "avg_rouge1": round(r1_sum / n, 4),
         "avg_rouge2": round(r2_sum / n, 4),
         "avg_rougeL": round(rl_sum / n, 4),
+        "avg_faithfulness": None if faith_count == 0 else round(faith_sum / faith_count, 4),
     }
     return {"summary": summary, "results": results}
 
@@ -172,9 +95,20 @@ def main():
     ap.add_argument("--api_key", default="", help="API key if provider requires it")
     ap.add_argument("--out", default="rag_index/qa_eval_report.json", help="Optional path to write JSON report")
     ap.add_argument("--sim_model", default="sentence-transformers/all-mpnet-base-v2", help="SentenceTransformer model name for semantic similarity")
+    ap.add_argument("--with_faithfulness", action="store_true", help="Compute RAGAS faithfulness (requires API key and internet)")
+    ap.add_argument("--semantic_min", type=float, default=None, help="If set, exit non-zero unless avg_semantic > this value")
+    ap.add_argument("--faithfulness_min", type=float, default=None, help="If set with --with_faithfulness, exit non-zero unless avg_faithfulness > this value")
     args = ap.parse_args()
 
-    report = evaluate(args.dataset, args.index, args.oos_threshold, args.provider, args.api_key, args.sim_model)
+    report = evaluate(
+        args.dataset,
+        args.index,
+        args.oos_threshold,
+        args.provider,
+        args.api_key,
+        args.sim_model,
+        args.with_faithfulness,
+    )
 
     # Pretty print summary
     s = report["summary"]
@@ -187,12 +121,32 @@ def main():
     print(f"Avg ROUGE-1:   {s['avg_rouge1']:.4f}")
     print(f"Avg ROUGE-2:   {s['avg_rouge2']:.4f}")
     print(f"Avg ROUGE-L:   {s['avg_rougeL']:.4f}")
+    if s.get("avg_faithfulness") is not None:
+        print(f"Avg Faithful.: {s['avg_faithfulness']:.4f}")
 
     # Save detailed report
     out_path = pathlib.Path(args.out)
     out_path.parent.mkdir(parents=True, exist_ok=True)
     out_path.write_text(json.dumps(report, ensure_ascii=False, indent=2), encoding="utf-8")
     print(f"\nWrote report to: {out_path}")
+
+    # Optional threshold enforcement for CI
+    sem_min = args.semantic_min
+    faith_min = args.faithfulness_min if args.with_faithfulness else None
+    if sem_min is not None or faith_min is not None:
+        ok = True
+        avg_sem = s.get("avg_semantic", 0.0)
+        if sem_min is not None:
+            sem_ok = float(avg_sem) > float(sem_min)
+            print(f"Check avg_semantic > {sem_min:.4f}: {avg_sem:.4f} -> {'OK' if sem_ok else 'FAIL'}")
+            ok = ok and sem_ok
+        if faith_min is not None:
+            avg_faith = s.get("avg_faithfulness")
+            faith_ok = (avg_faith is not None) and (float(avg_faith) > float(faith_min))
+            print(f"Check avg_faithfulness > {faith_min:.4f}: {avg_faith} -> {'OK' if faith_ok else 'FAIL'}")
+            ok = ok and faith_ok
+        if not ok:
+            raise SystemExit(1)
 
 
 if __name__ == "__main__":

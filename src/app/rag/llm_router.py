@@ -1,6 +1,7 @@
 import re, json
 from typing import List, Dict, Optional
 import google.generativeai as genai
+from openai import OpenAI
 from loguru import logger
 
 ## HELPER
@@ -52,11 +53,30 @@ class LlmRouter:
             logger.error("llm.error", e)
             return None
 
+    def _try_openai(self, prompt: str) -> Optional[str]:
+        try:
+            if not getattr(self, "_api_key", None):
+                return None
+            client = OpenAI(api_key=self._api_key)
+            resp = client.responses.create(
+                model="gpt-4o-mini",   # low-cost general text model
+                input=prompt,
+                temperature=0,         # deterministic for caching
+                max_output_tokens=512, # tweak as you like
+            )
+            text = getattr(resp, "output_text", None)
+            return text.strip() if text else None
+        except Exception:
+            logger.exception("llm.error")
+            return None
+
     def generate_answer(self, query: str, docs: List[Dict]) -> str:
         prompt = self._build_prompt(query, docs)
         text = None
         if self._llm_provider == "gemini":
             text = self._try_gemini(prompt)
+        if self._llm_provider == "openai":
+            text = self._try_openai(prompt)
         if text is None: ## if LLMs fail
             text = self.extractive_fallback(docs)
         return text
