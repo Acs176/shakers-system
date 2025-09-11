@@ -10,7 +10,7 @@ class Retriever:
         self.oos_threshold = oos_threshold
         self.vector_store = vx
 
-    def get_top_results(self, query: str, k: int = 3) -> Tuple[List[Dict], bool, List[Dict]]:
+    def get_top_results(self, query: str, k: int = 3, return_texts: bool = False) -> Tuple[List[Dict], bool, Optional[List[Dict]], Optional[List[str]]]:
 
         top_docs = self.top_k_search(query, k)
         out_of_scope = False
@@ -24,7 +24,7 @@ class Retriever:
             out_of_scope = max_sim01 < self.oos_threshold
 
         if out_of_scope:
-            return ([], out_of_scope, None)
+            return ([], out_of_scope, None, [] if return_texts else None)
         else:
             citations = [{
                 "title": d["title"],
@@ -33,7 +33,8 @@ class Retriever:
                 "chunk_id": d["id"],
                 "score": round((d["score"] + 1.0) / 2.0, 3)
             } for d in top_docs]
-            return top_docs, out_of_scope, citations
+            ctx_texts = [d["text"] for d in top_docs] if return_texts else None
+            return top_docs, out_of_scope, citations, ctx_texts
 
 
     def top_k_search(self, query: str, k: int = 3) -> List[Dict]:

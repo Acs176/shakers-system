@@ -11,3 +11,11 @@ opentelemetry-sdk==1.36.0
 opentelemetry-semantic-conventions==0.57b0
 uvicorn==0.35.0
 fastapi==0.116.1
+sacrebleu>=2.4.0
+rouge-score>=0.1.2
+ragas>=0.1.9
+datasets>=2.18.0
+evaluate>=0.4.2
+langchain>=0.2.0
+langchain-google-genai>=1.0.5
+langchain-community>=0.2.0
