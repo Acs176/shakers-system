@@ -24,7 +24,7 @@ on:
       provider:
         description: LLM provider for faithfulness (gemini|openai|none)
         required: false
-        default: none
+        default: gemini
       oos_threshold:
         description: Out-of-scope score threshold [0-1]
         required: false
@@ -96,26 +96,28 @@ jobs:
             echo "Failed to build vector index in $idx (expected vectors.faiss and meta.json)."; exit 1;
           fi
 
-      - name: Resolve provider API key (for faithfulness)
+      - name: Resolve provider API key
         id: keys
         shell: bash
         run: |
           provider="${{ github.event.inputs.provider }}"
-          with_f="${{ github.event.inputs.with_faithfulness }}"
           api_key=""
-          if [ "$with_f" = "true" ]; then
-            case "$provider" in
-              gemini)
-                api_key="${{ secrets.GEMINI_API_KEY }}" ;;
-              openai)
-                api_key="${{ secrets.OPENAI_API_KEY }}" ;;
-              none|"")
-                echo "with_faithfulness=true requires provider to be 'gemini' or 'openai'"; exit 1 ;;
-              *)
-                echo "Unsupported provider: $provider"; exit 1 ;;
-            esac
-            if [ -z "$api_key" ]; then echo "Missing API key secret for provider '$provider'"; exit 1; fi
-          fi
+          with_f="${{ github.event.inputs.with_faithfulness }}"
+          case "$provider" in
+            gemini)
+              api_key="${{ secrets.GEMINI_API_KEY }}" ;;
+            openai)
+              api_key="${{ secrets.OPENAI_API_KEY }}" ;;
+            none|"")
+              if [ "$with_f" = "true" ]; then
+                echo "with_faithfulness=true requires provider to be 'gemini' or 'openai'"
+                exit 1
+              fi ;;
+            *)
+              echo "Unsupported provider: $provider"; exit 1 ;;
+          esac
+          if [ -z "$api_key" ]; then echo "Missing API key secret for provider '$provider'"; exit 1; fi
+          
           echo "provider=$provider" >> "$GITHUB_OUTPUT"
           echo "api_key=$api_key" >> "$GITHUB_OUTPUT"
 
