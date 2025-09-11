@@ -44,6 +44,10 @@ on:
 
 jobs:
   qa-eval:
+    # Manual via Actions tab, or labeled PR (label: qa-eval)
+    if: >-
+      ${{ github.event_name == 'workflow_dispatch' ||
+          (github.event_name == 'pull_request' && contains(toJson(github.event.pull_request.labels), 'qa-eval')) }}
     runs-on: ubuntu-latest
     env:
       PYTHONUNBUFFERED: '1'
@@ -131,6 +135,8 @@ jobs:
 
       - name: Upload QA report
         uses: actions/upload-artifact@v4
+  pull_request:
+    types: [opened, synchronize, labeled, reopened]
         if: always()
         with:
           name: qa-eval-report
