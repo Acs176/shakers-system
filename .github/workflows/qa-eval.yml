@@ -54,6 +54,16 @@ jobs:
     runs-on: ubuntu-latest
     env:
       PYTHONUNBUFFERED: '1'
+      # Inputs with fallbacks so PR runs get defaults
+      KB_DIR: ${{ github.event.inputs.kb_dir || inputs.kb_dir || 'kb' }}
+      DATASET_PATH: ${{ github.event.inputs.dataset_path || inputs.dataset_path || 'kb/qa_test_dataset.json' }}
+      INDEX_DIR: ${{ github.event.inputs.index_dir || inputs.index_dir || 'rag_index' }}
+      WITH_FAITHFULNESS: ${{ github.event.inputs.with_faithfulness || inputs.with_faithfulness || 'false' }}
+      PROVIDER: ${{ github.event.inputs.provider || inputs.provider || 'gemini' }}
+      OOS_THRESHOLD: ${{ github.event.inputs.oos_threshold || inputs.oos_threshold || '0.2' }}
+      SIM_MODEL: ${{ github.event.inputs.sim_model || inputs.sim_model || 'sentence-transformers/all-mpnet-base-v2' }}
+      SEMANTIC_THRESHOLD: ${{ github.event.inputs.semantic_threshold || inputs.semantic_threshold || '0.7' }}
+      FAITHFULNESS_THRESHOLD: ${{ github.event.inputs.faithfulness_threshold || inputs.faithfulness_threshold || '0.8' }}
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -71,16 +81,16 @@ jobs:
       - name: Verify dataset exists
         shell: bash
         run: |
-          ds="${{ github.event.inputs.dataset_path }}"; [ -z "$ds" ] && ds="kb/qa_test_dataset.json"
-          idx="${{ github.event.inputs.index_dir }}"; [ -z "$idx" ] && idx="rag_index"
+          ds="$DATASET_PATH"
+          idx="$INDEX_DIR"
           echo "Dataset: $ds"; echo "Index dir: $idx"
           if [ ! -f "$ds" ]; then echo "Dataset not found: $ds"; exit 1; fi
 
       - name: Build vector index
         shell: bash
         run: |
-          kb="${{ github.event.inputs.kb_dir }}"; [ -z "$kb" ] && kb="kb"
-          idx="${{ github.event.inputs.index_dir }}"; [ -z "$idx" ] && idx="rag_index"
+          kb="$KB_DIR"
+          idx="$INDEX_DIR"
           if [ -f "$idx/vectors.faiss" ] && [ -f "$idx/meta.json" ]; then
             echo "Index already present in $idx; skipping build."
           else
@@ -100,41 +110,43 @@ jobs:
         id: keys
         shell: bash
         run: |
-          provider="${{ github.event.inputs.provider }}"
+          provider="${PROVIDER}"
+          with_f="${WITH_FAITHFULNESS}"
           api_key=""
-          with_f="${{ github.event.inputs.with_faithfulness }}"
           case "$provider" in
             gemini)
               api_key="${{ secrets.GEMINI_API_KEY }}" ;;
             openai)
               api_key="${{ secrets.OPENAI_API_KEY }}" ;;
             none|"")
-              if [ "$with_f" = "true" ]; then
-                echo "with_faithfulness=true requires provider to be 'gemini' or 'openai'"
-                exit 1
-              fi ;;
+              provider="none" ;;
             *)
               echo "Unsupported provider: $provider"; exit 1 ;;
           esac
-          if [ -z "$api_key" ]; then echo "Missing API key secret for provider '$provider'"; exit 1; fi
-          
+          if [ -z "$api_key" ]; then
+            echo "Warning: No API key available for provider '$provider'. Will use extractive fallback if needed." >&2
+            if [ "$with_f" = "true" ]; then
+              echo "Warning: Faithfulness requested but no API key; metric may be skipped and threshold check may fail." >&2
+            fi
+          fi
+
           echo "provider=$provider" >> "$GITHUB_OUTPUT"
           echo "api_key=$api_key" >> "$GITHUB_OUTPUT"
 
       - name: Run QA evaluation
         shell: bash
         run: |
-          ds="${{ github.event.inputs.dataset_path }}"; [ -z "$ds" ] && ds="kb/qa_test_dataset.json"
-          idx="${{ github.event.inputs.index_dir }}"; [ -z "$idx" ] && idx="rag_index"
-          oos="${{ github.event.inputs.oos_threshold }}"; [ -z "$oos" ] && oos="0.2"
-          sim="${{ github.event.inputs.sim_model }}"; [ -z "$sim" ] && sim="sentence-transformers/all-mpnet-base-v2"
+          ds="$DATASET_PATH"
+          idx="$INDEX_DIR"
+          oos="$OOS_THRESHOLD"
+          sim="$SIM_MODEL"
           provider="${{ steps.keys.outputs.provider }}"
           api_key="${{ steps.keys.outputs.api_key }}"
-          sem_thr="${{ github.event.inputs.semantic_threshold }}"; [ -z "$sem_thr" ] && sem_thr="0.7"
-          faith_thr="${{ github.event.inputs.faithfulness_threshold }}"; [ -z "$faith_thr" ] && faith_thr="0.8"
+          sem_thr="$SEMANTIC_THRESHOLD"
+          faith_thr="$FAITHFULNESS_THRESHOLD"
           out="qa_eval_report.json"
           args=( -m src.eval.qa_eval --dataset "$ds" --index "$idx" --oos_threshold "$oos" --provider "${provider:-none}" --api_key "${api_key}" --out "$out" --sim_model "$sim" --semantic_min "$sem_thr" )
-          if [ "${{ github.event.inputs.with_faithfulness }}" = "true" ]; then args+=( --with_faithfulness --faithfulness_min "$faith_thr" ); fi
+          if [ "${WITH_FAITHFULNESS}" = "true" ]; then args+=( --with_faithfulness --faithfulness_min "$faith_thr" ); fi
           echo "python ${args[*]}"
           python "${args[@]}"
 
