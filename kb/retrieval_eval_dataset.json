@@ -14,51 +14,64 @@
     "id": "ret_002",
     "question": "Outline the payment flow for a milestone on Shakers.",
     "source_docs": [
-      "kb/payments.md"
+      "kb/payments.md",
+      "kb/recommendable_resources/r_docs_payments_overview.md"
     ],
     "relevant_chunks": [
-      "payments.md#chunk_002"
+      "payments.md#chunk_002",
+      "r_docs_payments_overview.md#chunk_001",
+      "r_docs_payments_overview.md#chunk_002"
     ]
   },
   {
     "id": "ret_003",
     "question": "Are refunds possible before a milestone is approved?",
     "source_docs": [
-      "kb/payments.md"
+      "kb/payments.md",
+      "kb/recommendable_resources/r_docs_payments_overview.md"
     ],
     "relevant_chunks": [
-      "payments.md#chunk_003"
+      "payments.md#chunk_003",
+      "r_docs_payments_overview.md#chunk_002"
     ]
   },
   {
     "id": "ret_004",
     "question": "How long do freelancer payouts take after approval?",
     "source_docs": [
-      "kb/payments.md"
+      "kb/payments.md",
+      "kb/recommendable_resources/r_docs_payments_overview.md"
     ],
     "relevant_chunks": [
-      "payments.md#chunk_003"
+      "payments.md#chunk_003",
+      "r_docs_payments_overview.md#chunk_001"
     ]
   },
   {
     "id": "ret_005",
     "question": "How are invoices generated on Shakers?",
     "source_docs": [
-      "kb/invoicing.md"
+      "kb/invoicing.md",
+      "kb/recommendable_resources/r_docs_invoices_faq.md"
     ],
     "relevant_chunks": [
       "invoicing.md#chunk_001",
-      "invoicing.md#chunk_002"
+      "invoicing.md#chunk_002",
+      "r_docs_invoices_faq.md#chunk_001",
+      "r_docs_invoices_faq.md#chunk_002"
     ]
   },
   {
     "id": "ret_006",
     "question": "Does Shakers calculate VAT or sales tax on invoices?",
     "source_docs": [
-      "kb/invoicing.md"
+      "kb/invoicing.md",
+      "kb/recommendable_resources/r_docs_invoices_vat_eu.md"
     ],
     "relevant_chunks": [
-      "invoicing.md#chunk_003"
+      "invoicing.md#chunk_003",
+      "r_docs_invoices_vat_eu.md#chunk_001",
+      "r_docs_invoices_vat_eu.md#chunk_002"
     ]
   },
   {
@@ -96,31 +109,39 @@
     "id": "ret_010",
     "question": "Define a milestone and escrow in Shakers.",
     "source_docs": [
-      "kb/glossary.md"
+      "kb/glossary.md",
+      "kb/recommendable_resources/r_guide_milestones_setup.md"
     ],
     "relevant_chunks": [
-      "glossary.md#chunk_001"
+      "glossary.md#chunk_001",
+      "r_guide_milestones_setup.md#chunk_001",
+      "r_guide_milestones_setup.md#chunk_002"
     ]
   },
   {
     "id": "ret_011",
     "question": "How does the dispute resolution process work?",
     "source_docs": [
-      "kb/disputes.md"
+      "kb/disputes.md",
+      "kb/recommendable_resources/r_policy_disputes.md"
     ],
     "relevant_chunks": [
-      "disputes.md#chunk_002"
+      "disputes.md#chunk_002",
+      "r_policy_disputes.md#chunk_001",
+      "r_policy_disputes.md#chunk_002"
     ]
   },
   {
     "id": "ret_012",
     "question": "What plans does Shakers offer and how is billing handled?",
     "source_docs": [
-      "kb/pricing.md"
+      "kb/pricing.md",
+      "kb/recommendable_resources/r_docs_budgets_ranges.md"
     ],
     "relevant_chunks": [
       "pricing.md#chunk_002",
-      "pricing.md#chunk_003"
+      "pricing.md#chunk_003",
+      "r_docs_budgets_ranges.md#chunk_002"
     ]
   },
   {
@@ -137,11 +158,13 @@
     "id": "ret_014",
     "question": "How are projects structured and how is time tracked?",
     "source_docs": [
-      "kb/projects.md"
+      "kb/projects.md",
+      "kb/recommendable_resources/r_guide_milestones_setup.md"
     ],
     "relevant_chunks": [
       "projects.md#chunk_002",
-      "projects.md#chunk_003"
+      "projects.md#chunk_003",
+      "r_guide_milestones_setup.md#chunk_002"
     ]
   },
   {
@@ -159,11 +182,15 @@
     "id": "ret_016",
     "question": "What are best practices around contracts and NDAs?",
     "source_docs": [
-      "kb/contracts.md"
+      "kb/contracts.md",
+      "kb/recommendable_resources/r_article_contracts_tnm_vs_fixed.md",
+      "kb/recommendable_resources/r_docs_contracts_fixed_price.md"
     ],
     "relevant_chunks": [
       "contracts.md#chunk_002",
-      "contracts.md#chunk_003"
+      "contracts.md#chunk_003",
+      "r_article_contracts_tnm_vs_fixed.md#chunk_002",
+      "r_docs_contracts_fixed_price.md#chunk_002"
     ]
   },
   {
@@ -191,20 +218,25 @@
     "id": "ret_019",
     "question": "How do I post a job?",
     "source_docs": [
-      "kb/matching.md"
+      "kb/matching.md",
+      "kb/recommendable_resources/r_template_job_description_android.md"
     ],
     "relevant_chunks": [
-      "matching.md#chunk_002"
+      "matching.md#chunk_002",
+      "r_template_job_description_android.md#chunk_001",
+      "r_template_job_description_android.md#chunk_002"
     ]
   },
   {
     "id": "ret_020",
     "question": "Where can I see VAT/tax summaries?",
     "source_docs": [
-      "kb/invoicing.md"
+      "kb/invoicing.md",
+      "kb/recommendable_resources/r_docs_invoices_vat_eu.md"
     ],
     "relevant_chunks": [
-      "invoicing.md#chunk_003"
+      "invoicing.md#chunk_003",
+      "r_docs_invoices_vat_eu.md#chunk_001"
     ]
   },
   {
@@ -235,6 +267,17 @@
     ],
     "relevant_chunks": [
       "onboarding.md#chunk_002"
+    ]
+  },
+  {
+    "id": "ret_024",
+    "question": "Give a high-level overview of RAG architecture basics.",
+    "source_docs": [
+      "kb/recommendable_resources/r_docs_rag_architecture_basics.md"
+    ],
+    "relevant_chunks": [
+      "r_docs_rag_architecture_basics.md#chunk_001",
+      "r_docs_rag_architecture_basics.md#chunk_002"
     ]
   }
 ]
