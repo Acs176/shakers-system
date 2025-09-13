@@ -1,11 +1,11 @@
 import json
 import pathlib
 
-from src.eval.qa_eval import evaluate
+from src.eval.generation_eval import evaluate
 
 
 def test_rag_precision_recall_smoke():
-    ds_path = "kb/qa_test_dataset.json"
+    ds_path = "kb/gen_test_dataset.json"
     idx_dir = "rag_index"
 
     # Run evaluation using extractive fallback (no external LLM calls)
