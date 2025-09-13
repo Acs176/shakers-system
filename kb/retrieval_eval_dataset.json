@@ -1,0 +1,310 @@
+[
+  {
+    "id": "ret_001",
+    "question": "What is Shakers and what does it offer?",
+    "source_docs": [
+      "kb/overview.md"
+    ],
+    "relevant_chunks": [
+      "overview.md#chunk_001",
+      "overview.md#chunk_002"
+    ]
+  },
+  {
+    "id": "ret_002",
+    "question": "Outline the payment flow for a milestone on Shakers.",
+    "source_docs": [
+      "kb/payments.md",
+      "kb/recommendable_resources/r_docs_payments_overview.md"
+    ],
+    "relevant_chunks": [
+      "payments.md#chunk_002",
+      "r_docs_payments_overview.md#chunk_001",
+      "r_docs_payments_overview.md#chunk_002"
+    ]
+  },
+  {
+    "id": "ret_003",
+    "question": "Are refunds possible before a milestone is approved?",
+    "source_docs": [
+      "kb/payments.md",
+      "kb/recommendable_resources/r_docs_payments_overview.md"
+    ],
+    "relevant_chunks": [
+      "payments.md#chunk_003",
+      "r_docs_payments_overview.md#chunk_002"
+    ]
+  },
+  {
+    "id": "ret_004",
+    "question": "How long do freelancer payouts take after approval?",
+    "source_docs": [
+      "kb/payments.md",
+      "kb/recommendable_resources/r_docs_payments_overview.md"
+    ],
+    "relevant_chunks": [
+      "payments.md#chunk_003",
+      "r_docs_payments_overview.md#chunk_001"
+    ]
+  },
+  {
+    "id": "ret_005",
+    "question": "How are invoices generated on Shakers?",
+    "source_docs": [
+      "kb/invoicing.md",
+      "kb/recommendable_resources/r_docs_invoices_faq.md"
+    ],
+    "relevant_chunks": [
+      "invoicing.md#chunk_001",
+      "invoicing.md#chunk_002",
+      "r_docs_invoices_faq.md#chunk_001",
+      "r_docs_invoices_faq.md#chunk_002"
+    ]
+  },
+  {
+    "id": "ret_006",
+    "question": "Does Shakers calculate VAT or sales tax on invoices?",
+    "source_docs": [
+      "kb/invoicing.md",
+      "kb/recommendable_resources/r_docs_invoices_vat_eu.md"
+    ],
+    "relevant_chunks": [
+      "invoicing.md#chunk_003",
+      "r_docs_invoices_vat_eu.md#chunk_001",
+      "r_docs_invoices_vat_eu.md#chunk_002"
+    ]
+  },
+  {
+    "id": "ret_007",
+    "question": "What security features are available?",
+    "source_docs": [
+      "kb/security.md"
+    ],
+    "relevant_chunks": [
+      "security.md#chunk_002"
+    ]
+  },
+  {
+    "id": "ret_008",
+    "question": "What are the main roles and their permissions?",
+    "source_docs": [
+      "kb/roles.md"
+    ],
+    "relevant_chunks": [
+      "roles.md#chunk_002",
+      "roles.md#chunk_003"
+    ]
+  },
+  {
+    "id": "ret_009",
+    "question": "What are the steps to onboard a new company user?",
+    "source_docs": [
+      "kb/onboarding.md"
+    ],
+    "relevant_chunks": [
+      "onboarding.md#chunk_002"
+    ]
+  },
+  {
+    "id": "ret_010",
+    "question": "Define a milestone and escrow in Shakers.",
+    "source_docs": [
+      "kb/glossary.md",
+      "kb/recommendable_resources/r_guide_milestones_setup.md"
+    ],
+    "relevant_chunks": [
+      "glossary.md#chunk_001",
+      "r_guide_milestones_setup.md#chunk_001",
+      "r_guide_milestones_setup.md#chunk_002"
+    ]
+  },
+  {
+    "id": "ret_011",
+    "question": "How does the dispute resolution process work?",
+    "source_docs": [
+      "kb/disputes.md",
+      "kb/recommendable_resources/r_policy_disputes.md"
+    ],
+    "relevant_chunks": [
+      "disputes.md#chunk_002",
+      "r_policy_disputes.md#chunk_001",
+      "r_policy_disputes.md#chunk_002"
+    ]
+  },
+  {
+    "id": "ret_012",
+    "question": "What plans does Shakers offer and how is billing handled?",
+    "source_docs": [
+      "kb/pricing.md",
+      "kb/recommendable_resources/r_docs_budgets_ranges.md"
+    ],
+    "relevant_chunks": [
+      "pricing.md#chunk_002",
+      "pricing.md#chunk_003",
+      "r_docs_budgets_ranges.md#chunk_002"
+    ]
+  },
+  {
+    "id": "ret_013",
+    "question": "What criteria does the freelancer matching consider?",
+    "source_docs": [
+      "kb/matching.md"
+    ],
+    "relevant_chunks": [
+      "matching.md#chunk_003"
+    ]
+  },
+  {
+    "id": "ret_014",
+    "question": "How are projects structured and how is time tracked?",
+    "source_docs": [
+      "kb/projects.md",
+      "kb/recommendable_resources/r_guide_milestones_setup.md"
+    ],
+    "relevant_chunks": [
+      "projects.md#chunk_002",
+      "projects.md#chunk_003",
+      "r_guide_milestones_setup.md#chunk_002"
+    ]
+  },
+  {
+    "id": "ret_015",
+    "question": "How can I troubleshoot a 'Login failed' issue?",
+    "source_docs": [
+      "kb/faq.md"
+    ],
+    "relevant_chunks": [
+      "faq.md#chunk_002",
+      "faq.md#chunk_003"
+    ]
+  },
+  {
+    "id": "ret_016",
+    "question": "What are best practices around contracts and NDAs?",
+    "source_docs": [
+      "kb/contracts.md",
+      "kb/recommendable_resources/r_article_contracts_tnm_vs_fixed.md",
+      "kb/recommendable_resources/r_docs_contracts_fixed_price.md"
+    ],
+    "relevant_chunks": [
+      "contracts.md#chunk_002",
+      "contracts.md#chunk_003",
+      "r_article_contracts_tnm_vs_fixed.md#chunk_002",
+      "r_docs_contracts_fixed_price.md#chunk_002"
+    ]
+  },
+  {
+    "id": "ret_017",
+    "question": "What are the steps in the talent vetting process?",
+    "source_docs": [
+      "kb/vetting.md"
+    ],
+    "relevant_chunks": [
+      "vetting.md#chunk_002",
+      "vetting.md#chunk_003"
+    ]
+  },
+  {
+    "id": "ret_018",
+    "question": "What messaging features are available?",
+    "source_docs": [
+      "kb/messaging.md"
+    ],
+    "relevant_chunks": [
+      "messaging.md#chunk_002"
+    ]
+  },
+  {
+    "id": "ret_019",
+    "question": "How do I post a job?",
+    "source_docs": [
+      "kb/matching.md",
+      "kb/recommendable_resources/r_template_job_description_android.md"
+    ],
+    "relevant_chunks": [
+      "matching.md#chunk_002",
+      "r_template_job_description_android.md#chunk_001",
+      "r_template_job_description_android.md#chunk_002"
+    ]
+  },
+  {
+    "id": "ret_020",
+    "question": "Where can I see VAT/tax summaries?",
+    "source_docs": [
+      "kb/invoicing.md",
+      "kb/recommendable_resources/r_docs_invoices_vat_eu.md"
+    ],
+    "relevant_chunks": [
+      "invoicing.md#chunk_003",
+      "r_docs_invoices_vat_eu.md#chunk_001"
+    ]
+  },
+  {
+    "id": "ret_021",
+    "question": "What benefits are included in the Enterprise plan?",
+    "source_docs": [
+      "kb/pricing.md"
+    ],
+    "relevant_chunks": [
+      "pricing.md#chunk_002"
+    ]
+  },
+  {
+    "id": "ret_022",
+    "question": "How do I enable notifications for milestone updates?",
+    "source_docs": [
+      "kb/messaging.md"
+    ],
+    "relevant_chunks": [
+      "messaging.md#chunk_003"
+    ]
+  },
+  {
+    "id": "ret_023",
+    "question": "How do I create a workspace and add members?",
+    "source_docs": [
+      "kb/onboarding.md"
+    ],
+    "relevant_chunks": [
+      "onboarding.md#chunk_002"
+    ]
+  },
+  {
+    "id": "ret_024",
+    "question": "Give a high-level overview of RAG architecture basics.",
+    "source_docs": [
+      "kb/recommendable_resources/r_docs_rag_architecture_basics.md"
+    ],
+    "relevant_chunks": [
+      "r_docs_rag_architecture_basics.md#chunk_001",
+      "r_docs_rag_architecture_basics.md#chunk_002"
+    ]
+  },
+  {
+    "id": "ret_028",
+    "question": "How do fixed-price contracts differ from time & materials?",
+    "source_docs": [
+      "kb/contracts.md",
+      "kb/recommendable_resources/r_article_contracts_tnm_vs_fixed.md",
+      "kb/recommendable_resources/r_docs_contracts_fixed_price.md"
+    ],
+    "relevant_chunks": [
+      "contracts.md#chunk_002",
+      "r_article_contracts_tnm_vs_fixed.md#chunk_002",
+      "r_docs_contracts_fixed_price.md#chunk_002"
+    ]
+  },
+  {
+    "id": "ret_029",
+    "question": "How can I defend against prompt injection attacks?",
+    "source_docs": [
+      "kb/recommendable_resources/r_article_prompt_injection_defense.md",
+      "kb/security.md"
+    ],
+    "relevant_chunks": [
+      "r_article_prompt_injection_defense.md#chunk_001",
+      "r_article_prompt_injection_defense.md#chunk_002",
+      "security.md#chunk_002"
+    ]
+  }
+]

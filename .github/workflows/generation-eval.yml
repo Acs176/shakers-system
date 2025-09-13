@@ -1,0 +1,104 @@
+name: Generation (QA) Evaluation
+
+on:
+  workflow_dispatch:
+    inputs:
+      kb_dir:
+        description: Path to the knowledge base directory
+        required: false
+        default: kb
+      dataset_path:
+        description: Path to QA dataset JSON
+        required: false
+        default: kb/qa_test_dataset.json
+      index_dir:
+        description: Path to existing vector index directory
+        required: false
+        default: rag_index
+      with_faithfulness:
+        description: Compute RAGAS faithfulness (requires provider + API key)
+        type: boolean
+        required: false
+        default: false
+      provider:
+        description: LLM provider for faithfulness (gemini|openai|none)
+        required: false
+        default: gemini
+      oos_threshold:
+        description: Out-of-scope score threshold [0-1]
+        required: false
+        default: '0.2'
+      sim_model:
+        description: SentenceTransformer model name for semantic similarity
+        required: false
+        default: sentence-transformers/all-mpnet-base-v2
+      semantic_threshold:
+        description: Minimum avg semantic similarity to pass
+        required: false
+        default: '0.7'
+      faithfulness_threshold:
+        description: Minimum avg faithfulness to pass (when enabled)
+        required: false
+        default: '0.8'
+
+  pull_request:
+    types: [opened, synchronize, labeled, reopened]
+
+jobs:
+  generation-eval:
+    if: >-
+      ${{ github.event_name == 'workflow_dispatch' ||
+          (github.event_name == 'pull_request' && contains(toJson(github.event.pull_request.labels), 'gen-eval')) }}
+    runs-on: ubuntu-latest
+    env:
+      PYTHONUNBUFFERED: '1'
+      KB_DIR: ${{ github.event.inputs.kb_dir || inputs.kb_dir || 'kb' }}
+      DATASET_PATH: ${{ github.event.inputs.dataset_path || inputs.dataset_path || 'kb/qa_test_dataset.json' }}
+      INDEX_DIR: ${{ github.event.inputs.index_dir || inputs.index_dir || 'rag_index' }}
+      WITH_FAITHFULNESS: ${{ github.event.inputs.with_faithfulness || inputs.with_faithfulness || 'false' }}
+      PROVIDER: ${{ github.event.inputs.provider || inputs.provider || 'gemini' }}
+      OOS_THRESHOLD: ${{ github.event.inputs.oos_threshold || inputs.oos_threshold || '0.2' }}
+      SIM_MODEL: ${{ github.event.inputs.sim_model || inputs.sim_model || 'sentence-transformers/all-mpnet-base-v2' }}
+      SEMANTIC_THRESHOLD: ${{ github.event.inputs.semantic_threshold || inputs.semantic_threshold || '0.7' }}
+      FAITHFULNESS_THRESHOLD: ${{ github.event.inputs.faithfulness_threshold || inputs.faithfulness_threshold || '0.8' }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        
+      - name: Setup (deps, dataset, index)
+        id: setup
+        uses: ./.github/actions/eval-setup
+        with:
+          kb_dir: ${{ env.KB_DIR }}
+          dataset_path: ${{ env.DATASET_PATH }}
+          index_dir: ${{ env.INDEX_DIR }}
+          with_faithfulness: ${{ env.WITH_FAITHFULNESS }}
+          provider: ${{ env.PROVIDER }}
+          gemini_api_key: ${{ secrets.GEMINI_API_KEY }}
+          openai_api_key: ${{ secrets.OPENAI_API_KEY }}
+
+      - name: Run QA evaluation
+        shell: bash
+        env:
+          PROVIDER_RESOLVED: ${{ steps.setup.outputs.provider }}
+          API_KEY_RESOLVED: ${{ steps.setup.outputs.api_key }}
+        run: |
+          ds="$DATASET_PATH"
+          idx="$INDEX_DIR"
+          oos="$OOS_THRESHOLD"
+          sim="$SIM_MODEL"
+          provider="${PROVIDER_RESOLVED}"
+          api_key="${API_KEY_RESOLVED}"
+          sem_thr="$SEMANTIC_THRESHOLD"
+          faith_thr="$FAITHFULNESS_THRESHOLD"
+          out="qa_eval_report.json"
+          args=( -m src.eval.qa_eval --dataset "$ds" --index "$idx" --oos_threshold "$oos" --provider "${provider:-none}" --api_key "${api_key}" --out "$out" --sim_model "$sim" --semantic_min "$sem_thr" )
+          if [ "${WITH_FAITHFULNESS}" = "true" ]; then args+=( --with_faithfulness --faithfulness_min "$faith_thr" ); fi
+          echo "python ${args[*]}"
+          python "${args[@]}"
+
+      - name: Upload QA report
+        uses: actions/upload-artifact@v4
+        with:
+          name: qa-eval-report
+          path: qa_eval_report.json
