@@ -117,7 +117,7 @@ def evaluate(
 
 def main():
     ap = argparse.ArgumentParser(description="Evaluate RAG retriever quality (Recall@k, MRR, nDCG, etc.)")
-    ap.add_argument("--dataset", default="kb/qa_test_dataset.json", help="Path to QA JSON dataset")
+    ap.add_argument("--dataset", default="kb/retrieval_eval_dataset.json", help="Path to JSON dataset")
     ap.add_argument("--index", default="rag_index", help="Path to vector index directory")
     ap.add_argument("--k", type=int, default=5, help="Top-k to retrieve")
     ap.add_argument("--oos_threshold", type=float, default=0.2, help="Out-of-scope score threshold [0-1]")

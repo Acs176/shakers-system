@@ -1,4 +1,4 @@
-name: Generation (QA) Evaluation
+name: Generation Evaluation
 
 on:
   workflow_dispatch:
@@ -8,9 +8,9 @@ on:
         required: false
         default: kb
       dataset_path:
-        description: Path to QA dataset JSON
+        description: Path to gen dataset JSON
         required: false
-        default: kb/qa_test_dataset.json
+        default: kb/gen_test_dataset.json
       index_dir:
         description: Path to existing vector index directory
         required: false
@@ -53,7 +53,7 @@ jobs:
     env:
       PYTHONUNBUFFERED: '1'
       KB_DIR: ${{ github.event.inputs.kb_dir || inputs.kb_dir || 'kb' }}
-      DATASET_PATH: ${{ github.event.inputs.dataset_path || inputs.dataset_path || 'kb/qa_test_dataset.json' }}
+      DATASET_PATH: ${{ github.event.inputs.dataset_path || inputs.dataset_path || 'kb/gen_test_dataset.json' }}
       INDEX_DIR: ${{ github.event.inputs.index_dir || inputs.index_dir || 'rag_index' }}
       WITH_FAITHFULNESS: ${{ github.event.inputs.with_faithfulness || inputs.with_faithfulness || 'false' }}
       PROVIDER: ${{ github.event.inputs.provider || inputs.provider || 'gemini' }}
@@ -64,7 +64,7 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
-        
+
       - name: Setup (deps, dataset, index)
         id: setup
         uses: ./.github/actions/eval-setup
@@ -77,7 +77,7 @@ jobs:
           gemini_api_key: ${{ secrets.GEMINI_API_KEY }}
           openai_api_key: ${{ secrets.OPENAI_API_KEY }}
 
-      - name: Run QA evaluation
+      - name: Run GEN evaluation
         shell: bash
         env:
           PROVIDER_RESOLVED: ${{ steps.setup.outputs.provider }}
@@ -91,14 +91,14 @@ jobs:
           api_key="${API_KEY_RESOLVED}"
           sem_thr="$SEMANTIC_THRESHOLD"
           faith_thr="$FAITHFULNESS_THRESHOLD"
-          out="qa_eval_report.json"
-          args=( -m src.eval.qa_eval --dataset "$ds" --index "$idx" --oos_threshold "$oos" --provider "${provider:-none}" --api_key "${api_key}" --out "$out" --sim_model "$sim" --semantic_min "$sem_thr" )
+          out="gen_eval_report.json"
+          args=( -m src.eval.generation_eval --dataset "$ds" --index "$idx" --oos_threshold "$oos" --provider "${provider:-none}" --api_key "${api_key}" --out "$out" --sim_model "$sim" --semantic_min "$sem_thr" )
           if [ "${WITH_FAITHFULNESS}" = "true" ]; then args+=( --with_faithfulness --faithfulness_min "$faith_thr" ); fi
           echo "python ${args[*]}"
           python "${args[@]}"
 
-      - name: Upload QA report
+      - name: Upload eval report
         uses: actions/upload-artifact@v4
         with:
-          name: qa-eval-report
-          path: qa_eval_report.json
+          name: gen-eval-report
+          path: gen_eval_report.json
