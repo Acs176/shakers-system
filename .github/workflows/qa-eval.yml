@@ -41,6 +41,26 @@ on:
         description: Minimum avg faithfulness to pass (when enabled)
         required: false
         default: '0.8'
+      retrieval_k:
+        description: Top-k for retrieval evaluation
+        required: false
+        default: '5'
+      retrieval_granularity:
+        description: Relevance granularity for retrieval eval (doc|chunk)
+        required: false
+        default: doc
+      retrieval_recall_threshold:
+        description: Minimum avg recall@k to pass
+        required: false
+        default: '0.8'
+      retrieval_mrr_threshold:
+        description: Minimum avg MRR@k to pass
+        required: false
+        default: '0.7'
+      retrieval_ndcg_threshold:
+        description: Minimum avg nDCG@k to pass
+        required: false
+        default: '0.75'
 
   pull_request:
     types: [opened, synchronize, labeled, reopened]
@@ -64,6 +84,11 @@ jobs:
       SIM_MODEL: ${{ github.event.inputs.sim_model || inputs.sim_model || 'sentence-transformers/all-mpnet-base-v2' }}
       SEMANTIC_THRESHOLD: ${{ github.event.inputs.semantic_threshold || inputs.semantic_threshold || '0.7' }}
       FAITHFULNESS_THRESHOLD: ${{ github.event.inputs.faithfulness_threshold || inputs.faithfulness_threshold || '0.8' }}
+      RETRIEVAL_K: ${{ github.event.inputs.retrieval_k || inputs.retrieval_k || '5' }}
+      GRANULARITY: ${{ github.event.inputs.retrieval_granularity || inputs.retrieval_granularity || 'doc' }}
+      RETRIEVAL_RECALL_THRESHOLD: ${{ github.event.inputs.retrieval_recall_threshold || inputs.retrieval_recall_threshold || '0.8' }}
+      RETRIEVAL_MRR_THRESHOLD: ${{ github.event.inputs.retrieval_mrr_threshold || inputs.retrieval_mrr_threshold || '0.7' }}
+      RETRIEVAL_NDCG_THRESHOLD: ${{ github.event.inputs.retrieval_ndcg_threshold || inputs.retrieval_ndcg_threshold || '0.75' }}
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -150,8 +175,29 @@ jobs:
           echo "python ${args[*]}"
           python "${args[@]}"
 
+      - name: Run Retrieval evaluation
+        shell: bash
+        run: |
+          ds="$DATASET_PATH"
+          idx="$INDEX_DIR"
+          oos="$OOS_THRESHOLD"
+          k="$RETRIEVAL_K"
+          gran="$GRANULARITY"
+          r_thr="$RETRIEVAL_RECALL_THRESHOLD"
+          mrr_thr="$RETRIEVAL_MRR_THRESHOLD"
+          ndcg_thr="$RETRIEVAL_NDCG_THRESHOLD"
+          out="retrieval_eval_report.json"
+          args=( -m src.eval.retrieval_eval --dataset "$ds" --index "$idx" --k "$k" --oos_threshold "$oos" --granularity "$gran" --out "$out" --recall_min "$r_thr" --mrr_min "$mrr_thr" --ndcg_min "$ndcg_thr" )
+          echo "python ${args[*]}"
+          python "${args[@]}"
+
       - name: Upload QA report
         uses: actions/upload-artifact@v4
         with:
           name: qa-eval-report
           path: qa_eval_report.json
+      - name: Upload Retrieval report
+        uses: actions/upload-artifact@v4
+        with:
+          name: retrieval-eval-report
+          path: retrieval_eval_report.json

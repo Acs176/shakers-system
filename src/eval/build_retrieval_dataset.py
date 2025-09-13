@@ -230,6 +230,23 @@ def build_items() -> List[Dict]:
                 {"source": "r_docs_rag_architecture_basics.md", "sections": ["Summary", "Key Points"]},
             ],
         },
+        {
+            "id": "ret_028",
+            "question": "How do fixed-price contracts differ from time & materials?",
+            "docs": [
+                {"source": "r_article_contracts_tnm_vs_fixed.md", "sections": ["Key Points"]},
+                {"source": "contracts.md", "sections": ["Features"]},
+                {"source": "r_docs_contracts_fixed_price.md", "sections": ["Key Points"]},
+            ],
+        },
+        {
+            "id": "ret_029",
+            "question": "How can I defend against prompt injection attacks?",
+            "docs": [
+                {"source": "r_article_prompt_injection_defense.md", "sections": ["Summary", "Key Points"]},
+                {"source": "security.md", "sections": ["Security Features"]},
+            ],
+        },
     ]
 
     items: List[Dict] = []

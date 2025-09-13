@@ -1,0 +1,110 @@
+name: eval-setup
+description: Common setup steps for evaluation workflows
+
+inputs:
+  kb_dir:
+    description: Path to the knowledge base directory
+    required: true
+  dataset_path:
+    description: Path to the evaluation dataset JSON
+    required: true
+  index_dir:
+    description: Path to existing or target vector index directory
+    required: true
+  with_faithfulness:
+    description: Compute RAGAS faithfulness (requires provider + API key)
+    required: false
+    default: 'false'
+  provider:
+    description: LLM provider for faithfulness (gemini|openai|none)
+    required: false
+    default: 'none'
+  gemini_api_key:
+    description: Gemini API key (optional)
+    required: false
+    default: ''
+  openai_api_key:
+    description: OpenAI API key (optional)
+    required: false
+    default: ''
+
+outputs:
+  provider:
+    description: Resolved provider to use (or 'none')
+    value: ${{ steps.resolve-keys.outputs.provider }}
+  api_key:
+    description: Resolved API key for provider (may be empty)
+    value: ${{ steps.resolve-keys.outputs.api_key }}
+
+runs:
+  using: composite
+  steps:
+    - name: Checkout
+      uses: actions/checkout@v4
+
+    - name: Set up Python
+      uses: actions/setup-python@v5
+      with:
+        python-version: '3.10'
+
+    - name: Install dependencies
+      shell: bash
+      run: |
+        python -m pip install --upgrade pip
+        pip install -r requirements.txt
+
+    - name: Verify dataset exists
+      shell: bash
+      run: |
+        ds="${{ inputs.dataset_path }}"
+        idx="${{ inputs.index_dir }}"
+        echo "Dataset: $ds"; echo "Index dir: $idx"
+        if [ ! -f "$ds" ]; then echo "Dataset not found: $ds"; exit 1; fi
+
+    - name: Build vector index
+      shell: bash
+      run: |
+        kb="${{ inputs.kb_dir }}"
+        idx="${{ inputs.index_dir }}"
+        if [ -f "$idx/vectors.faiss" ] && [ -f "$idx/meta.json" ]; then
+          echo "Index already present in $idx; skipping build."
+        else
+          if [ ! -d "$kb" ]; then
+            echo "KB directory not found: $kb and no existing index in $idx."
+            echo "Provide a valid kb_dir or prebuild the index at $idx."
+            exit 1
+          fi
+          echo "Building index from $kb into $idx"
+          python -m src.app.data_ingestor.build_index_script "$kb" "$idx"
+        fi
+        if [ ! -f "$idx/vectors.faiss" ] || [ ! -f "$idx/meta.json" ]; then
+          echo "Failed to build vector index in $idx (expected vectors.faiss and meta.json)."; exit 1;
+        fi
+
+    - name: Resolve provider API key
+      id: resolve-keys
+      shell: bash
+      run: |
+        provider="${{ inputs.provider }}"
+        with_f="${{ inputs.with_faithfulness }}"
+        gem_key="${{ inputs.gemini_api_key }}"
+        openai_key="${{ inputs.openai_api_key }}"
+        api_key=""
+        case "$provider" in
+          gemini)
+            api_key="$gem_key" ;;
+          openai)
+            api_key="$openai_key" ;;
+          none|"")
+            provider="none" ;;
+          *)
+            echo "Unsupported provider: $provider"; exit 1 ;;
+        esac
+        if [ -z "$api_key" ]; then
+          echo "Warning: No API key available for provider '$provider'. Will use extractive fallback if needed." >&2
+          if [ "$with_f" = "true" ]; then
+            echo "Warning: Faithfulness requested but no API key; metric may be skipped and threshold check may fail." >&2
+          fi
+        fi
+        echo "provider=$provider" >> "$GITHUB_OUTPUT"
+        echo "api_key=$api_key" >> "$GITHUB_OUTPUT"

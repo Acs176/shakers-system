@@ -279,5 +279,32 @@
       "r_docs_rag_architecture_basics.md#chunk_001",
       "r_docs_rag_architecture_basics.md#chunk_002"
     ]
+  },
+  {
+    "id": "ret_028",
+    "question": "How do fixed-price contracts differ from time & materials?",
+    "source_docs": [
+      "kb/contracts.md",
+      "kb/recommendable_resources/r_article_contracts_tnm_vs_fixed.md",
+      "kb/recommendable_resources/r_docs_contracts_fixed_price.md"
+    ],
+    "relevant_chunks": [
+      "contracts.md#chunk_002",
+      "r_article_contracts_tnm_vs_fixed.md#chunk_002",
+      "r_docs_contracts_fixed_price.md#chunk_002"
+    ]
+  },
+  {
+    "id": "ret_029",
+    "question": "How can I defend against prompt injection attacks?",
+    "source_docs": [
+      "kb/recommendable_resources/r_article_prompt_injection_defense.md",
+      "kb/security.md"
+    ],
+    "relevant_chunks": [
+      "r_article_prompt_injection_defense.md#chunk_001",
+      "r_article_prompt_injection_defense.md#chunk_002",
+      "security.md#chunk_002"
+    ]
   }
 ]

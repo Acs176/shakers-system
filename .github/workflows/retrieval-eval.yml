@@ -1,0 +1,98 @@
+name: Retrieval Evaluation
+
+on:
+  workflow_dispatch:
+    inputs:
+      kb_dir:
+        description: Path to the knowledge base directory
+        required: false
+        default: kb
+      dataset_path:
+        description: Path to Retrieval dataset JSON
+        required: false
+        default: kb/retrieval_eval_dataset.json
+      index_dir:
+        description: Path to existing vector index directory
+        required: false
+        default: rag_index
+      oos_threshold:
+        description: Out-of-scope score threshold [0-1]
+        required: false
+        default: '0.2'
+      k:
+        description: Top-k for retrieval evaluation
+        required: false
+        default: '5'
+      granularity:
+        description: Relevance granularity (doc|chunk)
+        required: false
+        default: doc
+      recall_threshold:
+        description: Minimum avg recall@k to pass
+        required: false
+        default: '0.8'
+      mrr_threshold:
+        description: Minimum avg MRR@k to pass
+        required: false
+        default: '0.7'
+      ndcg_threshold:
+        description: Minimum avg nDCG@k to pass
+        required: false
+        default: '0.75'
+
+  pull_request:
+    types: [opened, synchronize, labeled, reopened]
+
+jobs:
+  retrieval-eval:
+    if: >-
+      ${{ github.event_name == 'workflow_dispatch' ||
+          (github.event_name == 'pull_request' && contains(toJson(github.event.pull_request.labels), 'retrieval-eval')) }}
+    runs-on: ubuntu-latest
+    env:
+      PYTHONUNBUFFERED: '1'
+      KB_DIR: ${{ github.event.inputs.kb_dir || inputs.kb_dir || 'kb' }}
+      DATASET_PATH: ${{ github.event.inputs.dataset_path || inputs.dataset_path || 'kb/retrieval_eval_dataset.json' }}
+      INDEX_DIR: ${{ github.event.inputs.index_dir || inputs.index_dir || 'rag_index' }}
+      OOS_THRESHOLD: ${{ github.event.inputs.oos_threshold || inputs.oos_threshold || '0.2' }}
+      RETRIEVAL_K: ${{ github.event.inputs.k || inputs.k || '5' }}
+      GRANULARITY: ${{ github.event.inputs.granularity || inputs.granularity || 'doc' }}
+      RETRIEVAL_RECALL_THRESHOLD: ${{ github.event.inputs.recall_threshold || inputs.recall_threshold || '0.8' }}
+      RETRIEVAL_MRR_THRESHOLD: ${{ github.event.inputs.mrr_threshold || inputs.mrr_threshold || '0.7' }}
+      RETRIEVAL_NDCG_THRESHOLD: ${{ github.event.inputs.ndcg_threshold || inputs.ndcg_threshold || '0.75' }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        
+      - name: Setup (deps, dataset, index)
+        uses: ./.github/actions/eval-setup
+        with:
+          kb_dir: ${{ env.KB_DIR }}
+          dataset_path: ${{ env.DATASET_PATH }}
+          index_dir: ${{ env.INDEX_DIR }}
+          with_faithfulness: 'false'
+          provider: 'none'
+          gemini_api_key: ${{ secrets.GEMINI_API_KEY }}
+          openai_api_key: ${{ secrets.OPENAI_API_KEY }}
+
+      - name: Run Retrieval evaluation
+        shell: bash
+        run: |
+          ds="$DATASET_PATH"
+          idx="$INDEX_DIR"
+          oos="$OOS_THRESHOLD"
+          k="$RETRIEVAL_K"
+          gran="$GRANULARITY"
+          r_thr="$RETRIEVAL_RECALL_THRESHOLD"
+          mrr_thr="$RETRIEVAL_MRR_THRESHOLD"
+          ndcg_thr="$RETRIEVAL_NDCG_THRESHOLD"
+          out="retrieval_eval_report.json"
+          args=( -m src.eval.retrieval_eval --dataset "$ds" --index "$idx" --k "$k" --oos_threshold "$oos" --granularity "$gran" --out "$out" --recall_min "$r_thr" --mrr_min "$mrr_thr" --ndcg_min "$ndcg_thr" )
+          echo "python ${args[*]}"
+          python "${args[@]}"
+
+      - name: Upload Retrieval report
+        uses: actions/upload-artifact@v4
+        with:
+          name: retrieval-eval-report
+          path: retrieval_eval_report.json
