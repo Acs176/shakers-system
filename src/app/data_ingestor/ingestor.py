@@ -52,26 +52,26 @@ def chunk_text(text: str, chunk_chars: int = 1200, overlap: int = 200) -> List[s
     start = 0
     while start < len(text):
         end = min(len(text), start + chunk_chars)
-        # Try to break at a newline or sentence end for better readability
+        # Try to break at a sentence end for better readability
         window = text[start:end]
-        cut = max(window.rfind("\n"), window.rfind(". "))
+        cut = max(window.rfind(s) for s in ("\n", ". ", "? ", "! ", "\n\n"))
         if cut == -1 or cut < int(chunk_chars * 0.5):
             cut = len(window)
         chunk = window[:cut].strip()
         if chunk:
             chunks.append(chunk)
-        start = max(0, start + chunk_chars - overlap)
-        if start >= len(text):
-            break
+        end = cut if cut > 0 else chunk_chars
+        start = max(0, start + end - overlap)
+
     # ensure tail
     if chunks and chunks[-1] != text[-len(chunks[-1]):]:
-        tail_start = chunks[-1] and text.rfind(chunks[-1]) + len(chunks[-1]) or 0
+        tail_start = chunks[-1] and text.rfind(chunks[-1]) + len(chunks[-1]) or 0 ## TODO: could be affected by duplicate chunks
         if tail_start < len(text):
             tail = text[tail_start:].strip()
             if tail:
                 chunks.append(tail[:chunk_chars])
-    # dedupe tiny fragments
-    chunks = [c for c in chunks if len(c) > 100]
+    # remove tiny fragments
+    chunks = [c for c in chunks if len(c) > 10] ## TODO: chunks with less than 10 chars, probably still should be appended or somehow kept
     return chunks or [text]
 
 def md_to_chunks(md_text: str, source_name: str, chunk_chars=1200, overlap=200) -> List[Dict]:
