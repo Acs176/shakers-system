@@ -54,6 +54,6 @@ class Retriever:
             if i == -1:
                 continue
             d = self.vector_store.meta[i].copy()
-            d["score"] = float(score)  # in [-1,1]
+            d["score"] = float(score)  # in [-1,1] // this is assumed because of emb. normalization
             out.append(d)
         return out
