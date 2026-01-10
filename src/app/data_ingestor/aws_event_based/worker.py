@@ -7,6 +7,7 @@ load_dotenv()
 
 POLL_INTERVAL_SECONDS = 10
 BATCH_SIZE = 5
+PROCESSING_TIMEOUT_SECONDS = 10 * 60  # 10 minutes
 
 AWS_REGION = os.environ["AWS_REGION"]
 OBJECT_TABLE = os.environ["OBJECT_TABLE"]
@@ -126,6 +127,31 @@ def process_document(doc):
     # Simulate embedding / indexing
     time.sleep(1)
 
+def recover_stuck_documents(limit=BATCH_SIZE):
+    cutoff = int(time.time()) - PROCESSING_TIMEOUT_SECONDS
+    ## object that started being processed before the cutoff or that failed
+    response = table.scan(
+        FilterExpression="""
+            processing_status = :p
+            AND last_processed_at < :cutoff
+            OR processing_status = :f
+        """,
+        ExpressionAttributeValues={
+            ":p": "PROCESSING",
+            ":cutoff": cutoff,
+            ":f": "FAILED",
+        },
+        Limit=limit,
+    )
+    stuck = response.get("Items", [])
+    print(f"[RECOVER] found {len(stuck)} stuck objects")
+    for doc in stuck:
+        # set them as pending again so they are re-tried
+        table.update_item(
+            Key={"object_key": doc["object_key"]},
+            UpdateExpression="SET processing_status = :pending",
+            ExpressionAttributeValues={":pending": "PENDING"},
+        )
 
 # ---------- Main worker loop ----------
 
@@ -133,6 +159,8 @@ def run_worker():
     print(f"RAG worker started. Polling every {POLL_INTERVAL_SECONDS} seconds.")
     while True:
         try:
+            recover_stuck_documents()
+
             docs = find_pending_documents()
             if not docs:
                 print("No work found.")
