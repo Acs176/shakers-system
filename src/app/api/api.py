@@ -12,7 +12,7 @@ import asyncio
 from src.metrics_setup import init_metrics
 from src.logging_setup import setup_logging, span
 
-from src.app.data_ingestor.vector_index import VectorIndex
+from src.app.data_ingestor.vector_index import FaissVectorStore
 from src.app.data_ingestor.resource_index import load_resource_index
 from src.app.user.db import init_db, create_profile, get_profile, record_query, append_seen
 from src.app.recommender.orchestrator import Recommender
@@ -61,7 +61,7 @@ def create_app() -> FastAPI:
         with span("startup"):
             with span("vector_index.load"):
                 index_path = os.getenv("VECTOR_INDEX_PATH") or "./rag_index"
-                state["vx"] = VectorIndex.load(index_path)
+                state["vx"] = FaissVectorStore.load(index_path)
 
             with span("resource_index.load"):
                 state["ri"] = load_resource_index(RESOURCE_JSON)

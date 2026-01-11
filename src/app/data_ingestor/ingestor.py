@@ -1,5 +1,5 @@
 import re, pathlib
-from typing import List, Dict, Tuple
+from typing import List, Dict, Tuple, Optional
 
 H1 = re.compile(r'^\s*#\s+(.*)$', re.MULTILINE)
 H2_SPLIT = re.compile(r'^\s*##\s+(.*)$', re.MULTILINE)
@@ -90,3 +90,22 @@ def md_to_chunks(md_text: str, source_name: str, chunk_chars=1200, overlap=200) 
                 "text": part
             })
     return items
+
+def text_to_chunks(text: str, source_name: str, chunk_chars=1200, overlap=200) -> List[Dict]:
+    title = pathlib.Path(source_name).stem
+    parts = chunk_text(text, chunk_chars=chunk_chars, overlap=overlap)
+    items = []
+    for idx, part in enumerate(parts, start=1):
+        items.append({
+            "id": f"{source_name}#chunk_{idx:03d}",
+            "title": title,
+            "section": "Body",
+            "source": source_name,
+            "text": part
+        })
+    return items
+
+def decode_bytes(data: bytes, content_type: Optional[str] = None) -> str:
+    if content_type and content_type.startswith("text/"):
+        return data.decode("utf-8", errors="replace")
+    raise ValueError("Non-text content can't be decoded to utf-8")
