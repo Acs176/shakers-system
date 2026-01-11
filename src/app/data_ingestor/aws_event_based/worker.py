@@ -3,6 +3,8 @@ import time
 import boto3
 from botocore.exceptions import ClientError
 from dotenv import load_dotenv
+from src.app.data_ingestor.vector_index import FaissVectorStore
+from src.app.data_ingestor.ingestor import md_to_chunks, text_to_chunks, decode_bytes
 load_dotenv()
 
 POLL_INTERVAL_SECONDS = 10
@@ -12,11 +14,18 @@ PROCESSING_TIMEOUT_SECONDS = 10 * 60  # 10 minutes
 AWS_REGION = os.environ["AWS_REGION"]
 OBJECT_TABLE = os.environ["OBJECT_TABLE"]
 BUCKET_NAME = os.environ["BUCKET_NAME"]
+VECTOR_INDEX_PATH = os.getenv("VECTOR_INDEX_PATH", "./rag_index")
+EMBEDDING_MODEL = os.getenv("EMBEDDING_MODEL", "sentence-transformers/all-MiniLM-L6-v2")
 
 dynamodb = boto3.resource("dynamodb", region_name=AWS_REGION)
 s3 = boto3.client("s3", region_name=AWS_REGION)
 
 table = dynamodb.Table(OBJECT_TABLE)
+try:
+    vector_store = FaissVectorStore.load(VECTOR_INDEX_PATH, model_name=EMBEDDING_MODEL)
+except FileNotFoundError:
+    vector_store = FaissVectorStore(model_name=EMBEDDING_MODEL)
+    vector_store.save(VECTOR_INDEX_PATH)
 
 # ---------- DynamoDB helpers ----------
 
@@ -107,33 +116,55 @@ def mark_failed(doc, error_message):
 
 def cleanup_tombstone(doc):
     print(f"[CLEANUP] Removing vectors for {doc['object_key']}")
-    ## vector_store.delete(doc["object_key"])
+    removed = vector_store.delete_by_object_key(doc["object_key"])
+    if removed:
+        vector_store.save(VECTOR_INDEX_PATH)
 
 def process_document(doc):
     """
-    Super simple document processing:
-    - download from S3
-    - print size
+    Download from S3, normalize text, chunk, and update vector store.
     """
     if doc["document_status"] == "TOMBSTONED":
         cleanup_tombstone(doc)
         return
+    ## fetch from s3
     key = doc["object_key"]
     response = s3.get_object(Bucket=BUCKET_NAME, Key=key)
+
+    ## check filetype
+    content_type = response.get("ContentType")
+    ext = os.path.splitext(key.lower())[1]
+    supported_exts = {".md", ".txt"}
+    supported_types = {"text/plain", "text/markdown"}
+    is_supported = ext in supported_exts or (content_type in supported_types)
+    if not is_supported:
+        print(f"[SKIP] {key} - unsupported type ext={ext or 'n/a'} content_type={content_type or 'n/a'}")
+        return
+    ## process supported file
     data = response["Body"].read()
+    text = decode_bytes(data, content_type)
 
-    print(f"[PROCESS] {key} → {len(data)} bytes")
+    print(f"[PROCESS] {key} - {len(data)} bytes")
 
-    # Simulate embedding / indexing
-    time.sleep(1)
+    if ext == ".md" or (content_type and "markdown" in content_type):
+        records = md_to_chunks(text, source_name=key)
+    else:
+        records = text_to_chunks(text, source_name=key)
+    for r in records:
+        r["object_key"] = key
+        r["object_version"] = doc.get("latest_version")
+    vector_store.delete_by_object_key(key)
+    vector_store.add(records)
+    vector_store.save(VECTOR_INDEX_PATH)
+
 
 def recover_stuck_documents(limit=BATCH_SIZE):
     cutoff = int(time.time()) - PROCESSING_TIMEOUT_SECONDS
     ## object that started being processed before the cutoff or that failed
     response = table.scan(
         FilterExpression="""
-            processing_status = :p
-            AND last_processed_at < :cutoff
+            (processing_status = :p
+            AND last_processed_at < :cutoff)
             OR processing_status = :f
         """,
         ExpressionAttributeValues={
@@ -174,7 +205,7 @@ def run_worker():
                     print(f"[DONE] {doc['object_key']}")
                 except Exception as e:
                     mark_failed(doc, str(e))
-                    print(f"[FAILED] {doc['object_key']} → {e}")
+                    print(f"[FAILED] {doc['object_key']} - {e}")
 
         except Exception as e:
             print(f"[WORKER ERROR] {e}")
