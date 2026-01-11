@@ -3,7 +3,7 @@ import json
 import pathlib
 from typing import Dict
 
-from src.app.data_ingestor.vector_index import VectorIndex
+from src.app.data_ingestor.vector_index import FaissVectorStore
 from src.app.rag.orchestrator import RagOrchestrator
 from src.eval.ragas_faithfulness import compute_faithfulness
 from src.eval.syntactic import prf1, strip_sources_footer, rouge_scores, sentence_bleu
@@ -20,7 +20,7 @@ def evaluate(
     with_faithfulness: bool = False, 
     ) -> Dict:
     
-    vx = VectorIndex.load(index_dir)
+    vx = FaissVectorStore.load(index_dir)
     rag = RagOrchestrator(provider, api_key, vx, oos_threshold)
 
     ds = json.loads(pathlib.Path(dataset_path).read_text(encoding="utf-8"))

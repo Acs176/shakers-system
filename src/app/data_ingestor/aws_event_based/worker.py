@@ -1,0 +1,217 @@
+import os
+import time
+import boto3
+from botocore.exceptions import ClientError
+from dotenv import load_dotenv
+from src.app.data_ingestor.vector_index import FaissVectorStore
+from src.app.data_ingestor.ingestor import md_to_chunks, text_to_chunks, decode_bytes
+load_dotenv()
+
+POLL_INTERVAL_SECONDS = 10
+BATCH_SIZE = 5
+PROCESSING_TIMEOUT_SECONDS = 10 * 60  # 10 minutes
+
+AWS_REGION = os.environ["AWS_REGION"]
+OBJECT_TABLE = os.environ["OBJECT_TABLE"]
+BUCKET_NAME = os.environ["BUCKET_NAME"]
+VECTOR_INDEX_PATH = os.getenv("VECTOR_INDEX_PATH", "./rag_index")
+EMBEDDING_MODEL = os.getenv("EMBEDDING_MODEL", "sentence-transformers/all-MiniLM-L6-v2")
+
+dynamodb = boto3.resource("dynamodb", region_name=AWS_REGION)
+s3 = boto3.client("s3", region_name=AWS_REGION)
+
+table = dynamodb.Table(OBJECT_TABLE)
+try:
+    vector_store = FaissVectorStore.load(VECTOR_INDEX_PATH, model_name=EMBEDDING_MODEL)
+except FileNotFoundError:
+    vector_store = FaissVectorStore(model_name=EMBEDDING_MODEL)
+    vector_store.save(VECTOR_INDEX_PATH)
+
+# ---------- DynamoDB helpers ----------
+
+def find_pending_documents(limit=BATCH_SIZE):
+    """
+    Find documents that need processing. (or to be deleted)
+    NOTE: For simplicity this uses a Scan.
+    In production, use a GSI.
+    """
+    response = table.scan(
+        Limit=limit,
+        FilterExpression="""
+            processing_status = :pending
+            OR embedded_version <> latest_version
+            OR attribute_not_exists(embedded_version)
+            
+        """,
+        ExpressionAttributeValues={
+            ":pending": "PENDING",
+        }
+    )
+    return response.get("Items", [])
+
+
+def claim_document(doc):
+    """
+    Atomically claim a document for processing.
+    """
+    try:
+        table.update_item(
+            Key={"object_key": doc["object_key"]},
+            UpdateExpression="SET processing_status = :processing",
+            ConditionExpression="processing_status = :pending",
+            ExpressionAttributeValues={
+                ":processing": "PROCESSING",
+                ":pending": "PENDING",
+            },
+        )
+        return True
+    except ClientError as e:
+        if e.response["Error"]["Code"] == "ConditionalCheckFailedException":
+            print(f"[CLAIMING] Document {doc['object_key']} already claimed. {doc['processing_status']} - {doc['document_status']}")
+            return False
+        raise
+
+
+def mark_indexed(doc):
+    """
+    Mark document as successfully processed.
+    """
+    table.update_item(
+        Key={"object_key": doc["object_key"]},
+        UpdateExpression="""
+            SET
+                embedded_version = :v,
+                processing_status = :indexed,
+                last_processed_at = :t
+        """,
+        ExpressionAttributeValues={
+            ":v": doc["latest_version"],
+            ":indexed": "INDEXED",
+            ":t": int(time.time()),
+        },
+    )
+
+
+def mark_failed(doc, error_message):
+    """
+    Mark document as failed.
+    """
+    table.update_item(
+        Key={"object_key": doc["object_key"]},
+        UpdateExpression="""
+            SET
+                processing_status = :failed,
+                error_message = :e,
+                last_processed_at = :t
+        """,
+        ExpressionAttributeValues={
+            ":failed": "FAILED",
+            ":e": error_message[:500],
+            ":t": int(time.time()),
+        },
+    )
+
+
+# ---------- Processing logic ----------
+
+def cleanup_tombstone(doc):
+    print(f"[CLEANUP] Removing vectors for {doc['object_key']}")
+    removed = vector_store.delete_by_object_key(doc["object_key"])
+    if removed:
+        vector_store.save(VECTOR_INDEX_PATH)
+
+def process_document(doc):
+    """
+    Download from S3, normalize text, chunk, and update vector store.
+    """
+    if doc["document_status"] == "TOMBSTONED":
+        cleanup_tombstone(doc)
+        return
+    ## fetch from s3
+    key = doc["object_key"]
+    response = s3.get_object(Bucket=BUCKET_NAME, Key=key)
+
+    ## check filetype
+    content_type = response.get("ContentType")
+    ext = os.path.splitext(key.lower())[1]
+    supported_exts = {".md", ".txt"}
+    supported_types = {"text/plain", "text/markdown"}
+    is_supported = ext in supported_exts or (content_type in supported_types)
+    if not is_supported:
+        print(f"[SKIP] {key} - unsupported type ext={ext or 'n/a'} content_type={content_type or 'n/a'}")
+        return
+    ## process supported file
+    data = response["Body"].read()
+    text = decode_bytes(data, content_type)
+
+    print(f"[PROCESS] {key} - {len(data)} bytes")
+
+    if ext == ".md" or (content_type and "markdown" in content_type):
+        records = md_to_chunks(text, source_name=key)
+    else:
+        records = text_to_chunks(text, source_name=key)
+    for r in records:
+        r["object_key"] = key
+        r["object_version"] = doc.get("latest_version")
+    vector_store.delete_by_object_key(key)
+    vector_store.add(records)
+    vector_store.save(VECTOR_INDEX_PATH)
+
+
+def recover_stuck_documents(limit=BATCH_SIZE):
+    cutoff = int(time.time()) - PROCESSING_TIMEOUT_SECONDS
+    ## object that started being processed before the cutoff or that failed
+    response = table.scan(
+        FilterExpression="""
+            (processing_status = :p
+            AND last_processed_at < :cutoff)
+            OR processing_status = :f
+        """,
+        ExpressionAttributeValues={
+            ":p": "PROCESSING",
+            ":cutoff": cutoff,
+            ":f": "FAILED",
+        },
+        Limit=limit,
+    )
+    stuck = response.get("Items", [])
+    print(f"[RECOVER] found {len(stuck)} stuck objects")
+    for doc in stuck:
+        # set them as pending again so they are re-tried
+        table.update_item(
+            Key={"object_key": doc["object_key"]},
+            UpdateExpression="SET processing_status = :pending",
+            ExpressionAttributeValues={":pending": "PENDING"},
+        )
+
+# ---------- Main worker loop ----------
+
+def run_worker():
+    print(f"RAG worker started. Polling every {POLL_INTERVAL_SECONDS} seconds.")
+    while True:
+        try:
+            recover_stuck_documents()
+
+            docs = find_pending_documents()
+            if not docs:
+                print("No work found.")
+            for doc in docs:
+                if not claim_document(doc):
+                    continue
+
+                try:
+                    process_document(doc)
+                    mark_indexed(doc)
+                    print(f"[DONE] {doc['object_key']}")
+                except Exception as e:
+                    mark_failed(doc, str(e))
+                    print(f"[FAILED] {doc['object_key']} - {e}")
+
+        except Exception as e:
+            print(f"[WORKER ERROR] {e}")
+
+        time.sleep(POLL_INTERVAL_SECONDS)
+
+
+if __name__ == "__main__":
+    run_worker()

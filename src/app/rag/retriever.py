@@ -1,9 +1,8 @@
 from typing import List, Dict, Optional, Tuple
-import numpy as np
-from src.app.data_ingestor.vector_index import VectorIndex
+from src.app.data_ingestor.vector_index import VectorStore
 
 class Retriever:
-    vector_store: VectorIndex
+    vector_store: VectorStore
     
     def __init__(self, vx, oos_threshold, METRICS=None):
         self.METRICS = METRICS
@@ -16,7 +15,8 @@ class Retriever:
         out_of_scope = False
         if not top_docs:
             out_of_scope = True
-            self.METRICS["out_of_scope_total"].add(1)
+            if self.METRICS:
+                self.METRICS["out_of_scope_total"].add(1)
         else:
             max_sim = max(d["score"] for d in top_docs)
             # Convert inner product (cosine) [-1,1] to [0,1] if you want a human-friendly score
@@ -42,18 +42,4 @@ class Retriever:
         returns a dictionary with the content and score of each top-k
         retrieved document
         """
-        q = self.vector_store.model.encode([query], normalize_embeddings=True)
-        if not isinstance(q, np.ndarray):
-            q = np.array(q, dtype="float32")
-        q = q.astype("float32")
-        D, I = self.vector_store.index.search(q, k)  # inner product similarity
-        sims = D[0].tolist()
-        idxs = I[0].tolist()
-        out = []
-        for score, i in zip(sims, idxs):
-            if i == -1:
-                continue
-            d = self.vector_store.meta[i].copy()
-            d["score"] = float(score)  # in [-1,1] // this is assumed because of emb. normalization
-            out.append(d)
-        return out
+        return self.vector_store.search(query, k)

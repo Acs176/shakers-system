@@ -3,7 +3,7 @@ import json
 import pathlib
 from typing import Dict, List, Set, Tuple
 
-from src.app.data_ingestor.vector_index import VectorIndex
+from src.app.data_ingestor.vector_index import FaissVectorStore
 from src.app.rag.retriever import Retriever
 from src.eval.retrieval_metrics import (
     precision_at_k,
@@ -42,7 +42,7 @@ def evaluate(
     if granularity not in {"doc", "chunk"}:
         raise ValueError("granularity must be 'doc' or 'chunk'")
 
-    vx = VectorIndex.load(index_dir)
+    vx = FaissVectorStore.load(index_dir)
     retriever = Retriever(vx, oos_threshold)
 
     ds = json.loads(pathlib.Path(dataset_path).read_text(encoding="utf-8"))
