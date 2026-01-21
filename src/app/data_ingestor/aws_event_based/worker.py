@@ -74,18 +74,15 @@ def configure_logging(level: str) -> None:
 
 def find_pending_documents(ctx: WorkerContext, limit: Optional[int] = None):
     """
-    Find documents that need processing. (or to be deleted)
-    NOTE: For simplicity this uses a Scan.
-    In production, use a GSI.
+    Find pending documents.
+    NOTE: For simplicity this uses a Scan. In production, use a GSI.
+    Assumes upstream updates set processing_status to PENDING on version changes.
     """
     batch_limit = limit or ctx.settings.batch_size
     response = ctx.table.scan(
         Limit=batch_limit,
         FilterExpression="""
             processing_status = :pending
-            OR embedded_version <> latest_version
-            OR attribute_not_exists(embedded_version)
-            
         """,
         ExpressionAttributeValues={
             ":pending": "PENDING",
@@ -141,6 +138,28 @@ def mark_indexed(ctx: WorkerContext, doc):
     )
 
 
+def mark_skipped(ctx: WorkerContext, doc, reason: str):
+    """
+    Mark document as skipped (non-indexable).
+    """
+    ctx.table.update_item(
+        Key={"object_key": doc["object_key"]},
+        UpdateExpression="""
+            SET
+                embedded_version = :v,
+                processing_status = :skipped,
+                skip_reason = :r,
+                last_processed_at = :t
+        """,
+        ExpressionAttributeValues={
+            ":v": doc["latest_version"],
+            ":skipped": "SKIPPED",
+            ":r": reason[:500],
+            ":t": int(time.time()),
+        },
+    )
+
+
 def mark_failed(ctx: WorkerContext, doc, error_message):
     """
     Mark document as failed.
@@ -169,13 +188,14 @@ def cleanup_tombstone(ctx: WorkerContext, doc):
     if removed:
         ctx.vector_store.save(ctx.settings.vector_index_path)
 
-def process_document(ctx: WorkerContext, doc):
+def process_document(ctx: WorkerContext, doc) -> Optional[str]:
     """
     Download from S3, normalize text, chunk, and update vector store.
+    Returns a skip reason if the document is not indexable.
     """
     if doc["document_status"] == "TOMBSTONED":
         cleanup_tombstone(ctx, doc)
-        return
+        return None
     ## fetch from s3
     key = doc["object_key"]
     response = ctx.s3.get_object(Bucket=ctx.settings.bucket_name, Key=key)
@@ -187,13 +207,9 @@ def process_document(ctx: WorkerContext, doc):
     supported_types = {"text/plain", "text/markdown"}
     is_supported = ext in supported_exts or (content_type in supported_types)
     if not is_supported:
-        logger.warning(
-            "Skipping unsupported type: key=%s ext=%s content_type=%s",
-            key,
-            ext or "n/a",
-            content_type or "n/a",
-        )
-        return
+        reason = f"unsupported type ext={ext or 'n/a'} content_type={content_type or 'n/a'}"
+        logger.warning("Skipping unsupported type: key=%s %s", key, reason)
+        return reason
     ## process supported file
     data = response["Body"].read()
     text = decode_bytes(data, content_type)
@@ -210,6 +226,7 @@ def process_document(ctx: WorkerContext, doc):
     ctx.vector_store.delete_by_object_key(key)
     ctx.vector_store.add(records)
     ctx.vector_store.save(ctx.settings.vector_index_path)
+    return None
 
 
 def recover_stuck_documents(ctx: WorkerContext, limit: Optional[int] = None):
@@ -275,9 +292,13 @@ def run_worker():
                     continue
 
                 try:
-                    process_document(ctx, doc)
-                    mark_indexed(ctx, doc)
-                    logger.info("Done key=%s", doc.get("object_key"))
+                    skip_reason = process_document(ctx, doc)
+                    if skip_reason:
+                        mark_skipped(ctx, doc, skip_reason)
+                        logger.info("Skipped key=%s", doc.get("object_key"))
+                    else:
+                        mark_indexed(ctx, doc)
+                        logger.info("Done key=%s", doc.get("object_key"))
                 except Exception as e:
                     mark_failed(ctx, doc, str(e))
                     logger.exception("Failed key=%s", doc.get("object_key"))
