@@ -1,42 +1,86 @@
+import logging
 import os
 import time
+from dataclasses import dataclass
+from typing import Optional
+
 import boto3
 from botocore.exceptions import ClientError
 from dotenv import load_dotenv
 from src.app.data_ingestor.vector_index import FaissVectorStore
 from src.app.data_ingestor.ingestor import md_to_chunks, text_to_chunks, decode_bytes
-load_dotenv()
 
-POLL_INTERVAL_SECONDS = 10
-BATCH_SIZE = 5
-PROCESSING_TIMEOUT_SECONDS = 10 * 60  # 10 minutes
+logger = logging.getLogger(__name__)
 
-AWS_REGION = os.environ["AWS_REGION"]
-OBJECT_TABLE = os.environ["OBJECT_TABLE"]
-BUCKET_NAME = os.environ["BUCKET_NAME"]
-VECTOR_INDEX_PATH = os.getenv("VECTOR_INDEX_PATH", "./rag_index")
-EMBEDDING_MODEL = os.getenv("EMBEDDING_MODEL", "sentence-transformers/all-MiniLM-L6-v2")
+DEFAULT_POLL_INTERVAL_SECONDS = 10
+DEFAULT_BATCH_SIZE = 5
+DEFAULT_PROCESSING_TIMEOUT_SECONDS = 10 * 60  # 10 minutes
+DEFAULT_VECTOR_INDEX_PATH = "./rag_index"
+DEFAULT_EMBEDDING_MODEL = "sentence-transformers/all-MiniLM-L6-v2"
 
-dynamodb = boto3.resource("dynamodb", region_name=AWS_REGION)
-s3 = boto3.client("s3", region_name=AWS_REGION)
 
-table = dynamodb.Table(OBJECT_TABLE)
-try:
-    vector_store = FaissVectorStore.load(VECTOR_INDEX_PATH, model_name=EMBEDDING_MODEL)
-except FileNotFoundError:
-    vector_store = FaissVectorStore(model_name=EMBEDDING_MODEL)
-    vector_store.save(VECTOR_INDEX_PATH)
+@dataclass(frozen=True)
+class Settings:
+    aws_region: str
+    object_table: str
+    bucket_name: str
+    vector_index_path: str
+    embedding_model: str
+    poll_interval_seconds: int
+    batch_size: int
+    processing_timeout_seconds: int
+    log_level: str
+
+    @staticmethod
+    def _require_env(name: str) -> str:
+        value = os.getenv(name)
+        if not value:
+            raise RuntimeError(f"Missing required environment variable: {name}")
+        return value
+
+    @classmethod
+    def from_env(cls) -> "Settings":
+        load_dotenv()
+        return cls(
+            aws_region=cls._require_env("AWS_REGION"),
+            object_table=cls._require_env("OBJECT_TABLE"),
+            bucket_name=cls._require_env("BUCKET_NAME"),
+            vector_index_path=os.getenv("VECTOR_INDEX_PATH", DEFAULT_VECTOR_INDEX_PATH),
+            embedding_model=os.getenv("EMBEDDING_MODEL", DEFAULT_EMBEDDING_MODEL),
+            poll_interval_seconds=int(os.getenv("POLL_INTERVAL_SECONDS", DEFAULT_POLL_INTERVAL_SECONDS)),
+            batch_size=int(os.getenv("BATCH_SIZE", DEFAULT_BATCH_SIZE)),
+            processing_timeout_seconds=int(
+                os.getenv("PROCESSING_TIMEOUT_SECONDS", DEFAULT_PROCESSING_TIMEOUT_SECONDS)
+            ),
+            log_level=os.getenv("LOG_LEVEL", "INFO"),
+        )
+
+
+@dataclass(frozen=True)
+class WorkerContext:
+    settings: Settings
+    table: object
+    s3: object
+    vector_store: FaissVectorStore
+
+
+def configure_logging(level: str) -> None:
+    logging.basicConfig(
+        level=level.upper(),
+        format="%(asctime)s %(levelname)s %(name)s %(message)s",
+    )
 
 # ---------- DynamoDB helpers ----------
 
-def find_pending_documents(limit=BATCH_SIZE):
+def find_pending_documents(ctx: WorkerContext, limit: Optional[int] = None):
     """
     Find documents that need processing. (or to be deleted)
     NOTE: For simplicity this uses a Scan.
     In production, use a GSI.
     """
-    response = table.scan(
-        Limit=limit,
+    batch_limit = limit or ctx.settings.batch_size
+    response = ctx.table.scan(
+        Limit=batch_limit,
         FilterExpression="""
             processing_status = :pending
             OR embedded_version <> latest_version
@@ -50,12 +94,12 @@ def find_pending_documents(limit=BATCH_SIZE):
     return response.get("Items", [])
 
 
-def claim_document(doc):
+def claim_document(ctx: WorkerContext, doc):
     """
     Atomically claim a document for processing.
     """
     try:
-        table.update_item(
+        ctx.table.update_item(
             Key={"object_key": doc["object_key"]},
             UpdateExpression="SET processing_status = :processing",
             ConditionExpression="processing_status = :pending",
@@ -67,16 +111,21 @@ def claim_document(doc):
         return True
     except ClientError as e:
         if e.response["Error"]["Code"] == "ConditionalCheckFailedException":
-            print(f"[CLAIMING] Document {doc['object_key']} already claimed. {doc['processing_status']} - {doc['document_status']}")
+            logger.info(
+                "Document already claimed: key=%s status=%s doc_status=%s",
+                doc.get("object_key"),
+                doc.get("processing_status"),
+                doc.get("document_status"),
+            )
             return False
         raise
 
 
-def mark_indexed(doc):
+def mark_indexed(ctx: WorkerContext, doc):
     """
     Mark document as successfully processed.
     """
-    table.update_item(
+    ctx.table.update_item(
         Key={"object_key": doc["object_key"]},
         UpdateExpression="""
             SET
@@ -92,11 +141,11 @@ def mark_indexed(doc):
     )
 
 
-def mark_failed(doc, error_message):
+def mark_failed(ctx: WorkerContext, doc, error_message):
     """
     Mark document as failed.
     """
-    table.update_item(
+    ctx.table.update_item(
         Key={"object_key": doc["object_key"]},
         UpdateExpression="""
             SET
@@ -114,22 +163,22 @@ def mark_failed(doc, error_message):
 
 # ---------- Processing logic ----------
 
-def cleanup_tombstone(doc):
-    print(f"[CLEANUP] Removing vectors for {doc['object_key']}")
-    removed = vector_store.delete_by_object_key(doc["object_key"])
+def cleanup_tombstone(ctx: WorkerContext, doc):
+    logger.info("Removing vectors for %s", doc.get("object_key"))
+    removed = ctx.vector_store.delete_by_object_key(doc["object_key"])
     if removed:
-        vector_store.save(VECTOR_INDEX_PATH)
+        ctx.vector_store.save(ctx.settings.vector_index_path)
 
-def process_document(doc):
+def process_document(ctx: WorkerContext, doc):
     """
     Download from S3, normalize text, chunk, and update vector store.
     """
     if doc["document_status"] == "TOMBSTONED":
-        cleanup_tombstone(doc)
+        cleanup_tombstone(ctx, doc)
         return
     ## fetch from s3
     key = doc["object_key"]
-    response = s3.get_object(Bucket=BUCKET_NAME, Key=key)
+    response = ctx.s3.get_object(Bucket=ctx.settings.bucket_name, Key=key)
 
     ## check filetype
     content_type = response.get("ContentType")
@@ -138,13 +187,18 @@ def process_document(doc):
     supported_types = {"text/plain", "text/markdown"}
     is_supported = ext in supported_exts or (content_type in supported_types)
     if not is_supported:
-        print(f"[SKIP] {key} - unsupported type ext={ext or 'n/a'} content_type={content_type or 'n/a'}")
+        logger.warning(
+            "Skipping unsupported type: key=%s ext=%s content_type=%s",
+            key,
+            ext or "n/a",
+            content_type or "n/a",
+        )
         return
     ## process supported file
     data = response["Body"].read()
     text = decode_bytes(data, content_type)
 
-    print(f"[PROCESS] {key} - {len(data)} bytes")
+    logger.info("Processing key=%s bytes=%s", key, len(data))
 
     if ext == ".md" or (content_type and "markdown" in content_type):
         records = md_to_chunks(text, source_name=key)
@@ -153,15 +207,15 @@ def process_document(doc):
     for r in records:
         r["object_key"] = key
         r["object_version"] = doc.get("latest_version")
-    vector_store.delete_by_object_key(key)
-    vector_store.add(records)
-    vector_store.save(VECTOR_INDEX_PATH)
+    ctx.vector_store.delete_by_object_key(key)
+    ctx.vector_store.add(records)
+    ctx.vector_store.save(ctx.settings.vector_index_path)
 
 
-def recover_stuck_documents(limit=BATCH_SIZE):
-    cutoff = int(time.time()) - PROCESSING_TIMEOUT_SECONDS
+def recover_stuck_documents(ctx: WorkerContext, limit: Optional[int] = None):
+    cutoff = int(time.time()) - ctx.settings.processing_timeout_seconds
     ## object that started being processed before the cutoff or that failed
-    response = table.scan(
+    response = ctx.table.scan(
         FilterExpression="""
             (processing_status = :p
             AND last_processed_at < :cutoff)
@@ -172,13 +226,13 @@ def recover_stuck_documents(limit=BATCH_SIZE):
             ":cutoff": cutoff,
             ":f": "FAILED",
         },
-        Limit=limit,
+        Limit=limit or ctx.settings.batch_size,
     )
     stuck = response.get("Items", [])
-    print(f"[RECOVER] found {len(stuck)} stuck objects")
+    logger.info("Recover found %s stuck objects", len(stuck))
     for doc in stuck:
         # set them as pending again so they are re-tried
-        table.update_item(
+        ctx.table.update_item(
             Key={"object_key": doc["object_key"]},
             UpdateExpression="SET processing_status = :pending",
             ExpressionAttributeValues={":pending": "PENDING"},
@@ -187,30 +241,51 @@ def recover_stuck_documents(limit=BATCH_SIZE):
 # ---------- Main worker loop ----------
 
 def run_worker():
-    print(f"RAG worker started. Polling every {POLL_INTERVAL_SECONDS} seconds.")
+    settings = Settings.from_env()
+    configure_logging(settings.log_level)
+
+    dynamodb = boto3.resource("dynamodb", region_name=settings.aws_region)
+    s3 = boto3.client("s3", region_name=settings.aws_region)
+    table = dynamodb.Table(settings.object_table)
+    try:
+        vector_store = FaissVectorStore.load(
+            settings.vector_index_path,
+            model_name=settings.embedding_model,
+        )
+    except FileNotFoundError:
+        vector_store = FaissVectorStore(model_name=settings.embedding_model)
+        vector_store.save(settings.vector_index_path)
+
+    ctx = WorkerContext(settings=settings, table=table, s3=s3, vector_store=vector_store)
+
+    logger.info(
+        "RAG worker started. poll_interval=%ss batch_size=%s",
+        settings.poll_interval_seconds,
+        settings.batch_size,
+    )
     while True:
         try:
-            recover_stuck_documents()
+            recover_stuck_documents(ctx)
 
-            docs = find_pending_documents()
+            docs = find_pending_documents(ctx)
             if not docs:
-                print("No work found.")
+                logger.info("No work found.")
             for doc in docs:
-                if not claim_document(doc):
+                if not claim_document(ctx, doc):
                     continue
 
                 try:
-                    process_document(doc)
-                    mark_indexed(doc)
-                    print(f"[DONE] {doc['object_key']}")
+                    process_document(ctx, doc)
+                    mark_indexed(ctx, doc)
+                    logger.info("Done key=%s", doc.get("object_key"))
                 except Exception as e:
-                    mark_failed(doc, str(e))
-                    print(f"[FAILED] {doc['object_key']} - {e}")
+                    mark_failed(ctx, doc, str(e))
+                    logger.exception("Failed key=%s", doc.get("object_key"))
 
         except Exception as e:
-            print(f"[WORKER ERROR] {e}")
+            logger.exception("Worker error")
 
-        time.sleep(POLL_INTERVAL_SECONDS)
+        time.sleep(settings.poll_interval_seconds)
 
 
 if __name__ == "__main__":
