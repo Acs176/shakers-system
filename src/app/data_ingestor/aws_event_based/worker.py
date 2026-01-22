@@ -7,7 +7,7 @@ from typing import Optional
 import boto3
 from botocore.exceptions import ClientError
 from dotenv import load_dotenv
-from src.app.data_ingestor.vector_index import FaissVectorStore
+from src.app.data_ingestor.vector_index import FaissVectorStore, PgVectorStore, VectorStore
 from src.app.data_ingestor.ingestor import md_to_chunks, text_to_chunks, decode_bytes
 
 logger = logging.getLogger(__name__)
@@ -24,6 +24,8 @@ class Settings:
     aws_region: str
     object_table: str
     bucket_name: str
+    vector_store: str
+    pg_dsn: str
     vector_index_path: str
     embedding_model: str
     poll_interval_seconds: int
@@ -45,6 +47,8 @@ class Settings:
             aws_region=cls._require_env("AWS_REGION"),
             object_table=cls._require_env("OBJECT_TABLE"),
             bucket_name=cls._require_env("BUCKET_NAME"),
+            vector_store=cls._require_env("VECTOR_STORE"),
+            pg_dsn=os.getenv("PG_DSN", ""),
             vector_index_path=os.getenv("VECTOR_INDEX_PATH", DEFAULT_VECTOR_INDEX_PATH),
             embedding_model=os.getenv("EMBEDDING_MODEL", DEFAULT_EMBEDDING_MODEL),
             poll_interval_seconds=int(os.getenv("POLL_INTERVAL_SECONDS", DEFAULT_POLL_INTERVAL_SECONDS)),
@@ -61,7 +65,7 @@ class WorkerContext:
     settings: Settings
     table: object
     s3: object
-    vector_store: FaissVectorStore
+    vector_store: VectorStore
 
 
 def configure_logging(level: str) -> None:
@@ -264,14 +268,25 @@ def run_worker():
     dynamodb = boto3.resource("dynamodb", region_name=settings.aws_region)
     s3 = boto3.client("s3", region_name=settings.aws_region)
     table = dynamodb.Table(settings.object_table)
-    try:
-        vector_store = FaissVectorStore.load(
-            settings.vector_index_path,
+    vector_store: VectorStore
+    if settings.vector_store == "faiss":
+        try:
+            vector_store = FaissVectorStore.load(
+                settings.vector_index_path,
+                model_name=settings.embedding_model,
+            )
+        except FileNotFoundError:
+            vector_store = FaissVectorStore(model_name=settings.embedding_model)
+            vector_store.save(settings.vector_index_path)
+    elif settings.vector_store == "pgvector":
+        if not settings.pg_dsn:
+            raise RuntimeError("PG_DSN is required when VECTOR_STORE=pgvector.")
+        vector_store = PgVectorStore(
+            settings.pg_dsn,
             model_name=settings.embedding_model,
         )
-    except FileNotFoundError:
-        vector_store = FaissVectorStore(model_name=settings.embedding_model)
-        vector_store.save(settings.vector_index_path)
+    else:
+        raise RuntimeError(f"Unsupported VECTOR_STORE: {settings.vector_store}")
 
     ctx = WorkerContext(settings=settings, table=table, s3=s3, vector_store=vector_store)
 

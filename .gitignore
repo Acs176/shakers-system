@@ -2,3 +2,4 @@
 .venv/
 rag_index/
 __pycache__/
+.vscode/
